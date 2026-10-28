@@ -13,7 +13,7 @@ const GOALS = [
   { xp: 200, name: 'Intense' },
 ]
 
-export default function Settings({ profile, onSave, onChangePin, onDelete, onExit }) {
+export default function Settings({ profile, onSave, onChangePin, onDelete, onSignOut, onExit }) {
   const [form, setForm] = useState({
     name: profile.name,
     avatar: profile.avatar,
@@ -54,6 +54,9 @@ export default function Settings({ profile, onSave, onChangePin, onDelete, onExi
           ←
         </button>
         <h1 className="title-lg">Settings · {profile.name}</h1>
+        <button type="button" className="btn btn-small hud-signout" onClick={onSignOut}>
+          <span aria-hidden="true">🚪</span> Sign out
+        </button>
       </header>
 
       <form

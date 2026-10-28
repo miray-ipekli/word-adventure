@@ -2011,6 +2011,14 @@ p {
   color: var(--bad);
 }
 
+.hud-signout {
+  min-height: 44px;
+}
+
+.page-top .hud-signout {
+  margin-left: auto;
+}
+
 /* ---------- PIN, cloud and sync ---------- */
 
 .notice {

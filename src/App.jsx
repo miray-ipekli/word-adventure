@@ -332,6 +332,7 @@ export default function App() {
       return (
         <Settings
           profile={profile}
+          onSignOut={signOut}
           onSave={(changes) => {
             changeSettings(changes)
             setScreen('map')

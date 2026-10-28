@@ -59,6 +59,9 @@ function Hud({ profile, sound, sync, onSwitch, onSettings }) {
         <button type="button" className="icon-btn" onClick={onSettings} aria-label="Settings">
           ⚙️
         </button>
+        <button type="button" className="btn btn-small hud-signout" onClick={onSwitch} title="Back to the explorer list">
+          <span aria-hidden="true">🚪</span> Sign out
+        </button>
       </div>
     </header>
   )
