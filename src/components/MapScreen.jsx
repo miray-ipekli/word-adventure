@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { CUSTOM_TOPIC, topicById } from '../data/topics.js'
-import { liveStreak, rankInfo, todayXp } from '../lib/storage.js'
+import { liveStreak, rankInfo, todayXp, totalXp } from '../lib/progress.js'
 import {
   activeWords,
   chestProgress,
@@ -30,8 +30,10 @@ function GoalRing({ value, goal }) {
   )
 }
 
-function Hud({ profile, sound, onSwitch, onSettings }) {
-  const rank = rankInfo(profile.xp)
+const SYNC_LABEL = { saved: 'Saved', saving: 'Saving…', offline: 'Offline · will sync' }
+
+function Hud({ profile, sound, sync, onSwitch, onSettings }) {
+  const rank = rankInfo(totalXp(profile))
   const xpToday = todayXp(profile)
   const streak = liveStreak(profile)
   return (
@@ -50,6 +52,9 @@ function Hud({ profile, sound, onSwitch, onSettings }) {
         </span>
       </div>
       <div className="hud-stats">
+        <span className={`sync sync-${sync}`} title="Your progress is saved to the cloud">
+          {SYNC_LABEL[sync]}
+        </span>
         <span className={`hud-stat streak ${streak ? 'is-on' : ''}`} title="Days in a row">
           <span aria-hidden="true">🔥</span> {streak}
         </span>
@@ -79,7 +84,7 @@ function formatWait(ms) {
 }
 
 export default function MapScreen(props) {
-  const { profile, sound, onIsland, onReview, onTricky, onSpeak, onWords, onSettings, onSwitch, onLevelUp } = props
+  const { profile, sound, sync, onIsland, onReview, onTricky, onSpeak, onWords, onSettings, onSwitch, onLevelUp } = props
   const [sheet, setSheet] = useState(null)
   const [chestOpen, setChestOpen] = useState(false)
 
@@ -96,7 +101,7 @@ export default function MapScreen(props) {
 
   return (
     <div className="screen map-screen">
-      <Hud profile={profile} sound={sound} onSwitch={onSwitch} onSettings={onSettings} />
+      <Hud profile={profile} sound={sound} sync={sync} onSwitch={onSwitch} onSettings={onSettings} />
 
       <div className="map-layout">
         <section className="map-frame sticker" aria-label="Map">

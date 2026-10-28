@@ -3,10 +3,11 @@ import { AVATARS, AVATAR_COLORS } from '../lib/storage.js'
 import { PICK_COUNT } from '../data/topics.js'
 import { play } from '../lib/sound.js'
 import { Avatar, AvatarPicker, LevelPicker, TopicPicker } from './Pickers.jsx'
+import { NewPin } from './PinPad.jsx'
 
-const STEPS = ['Explorer', 'Level', 'Islands']
+const STEPS = ['Explorer', 'Level', 'Islands', 'PIN']
 
-export default function Onboarding({ canCancel, onCancel, onDone }) {
+export default function Onboarding({ canCancel, busy, error, onCancel, onDone }) {
   const [step, setStep] = useState(0)
   const [form, setForm] = useState({
     name: '',
@@ -16,17 +17,12 @@ export default function Onboarding({ canCancel, onCancel, onDone }) {
     topics: [],
   })
 
-  const valid = [form.name.trim().length > 0, !!form.level, form.topics.length === PICK_COUNT][step]
+  const valid = [form.name.trim().length > 0, !!form.level, form.topics.length === PICK_COUNT, false][step]
 
   const next = () => {
     if (!valid) return
-    if (step < STEPS.length - 1) {
-      play('tap')
-      setStep(step + 1)
-    } else {
-      play('fanfare')
-      onDone({ ...form, name: form.name.trim() })
-    }
+    play('tap')
+    setStep(step + 1)
   }
 
   return (
@@ -89,6 +85,23 @@ export default function Onboarding({ canCancel, onCancel, onDone }) {
           </section>
         )}
 
+        {step === 3 && (
+          <section className="step step-pin">
+            <h2 className="title-lg">Pick a secret PIN</h2>
+            <p className="muted">
+              You will type it each time you open the game on a new device. Choose something {form.name.trim() || 'you'} can remember.
+            </p>
+            <NewPin
+              busy={busy}
+              error={error}
+              onDone={(pin) => {
+                play('fanfare')
+                onDone({ ...form, name: form.name.trim(), pin })
+              }}
+            />
+          </section>
+        )}
+
         <div className="form-actions">
           {step > 0 ? (
             <button type="button" className="btn btn-ghost" onClick={() => setStep(step - 1)}>
@@ -101,9 +114,11 @@ export default function Onboarding({ canCancel, onCancel, onDone }) {
           ) : (
             <span />
           )}
-          <button type="submit" className="btn btn-primary" disabled={!valid}>
-            {step === STEPS.length - 1 ? 'Set sail!' : 'Next'}
-          </button>
+          {step < 3 && (
+            <button type="submit" className="btn btn-primary" disabled={!valid}>
+              Next
+            </button>
+          )}
         </div>
       </form>
     </div>

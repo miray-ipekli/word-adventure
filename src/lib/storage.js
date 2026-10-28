@@ -1,87 +1,62 @@
-// Profiles live in this browser's localStorage. Each device keeps its own explorers.
-const KEY = 'word-adventure.v1'
+// What this browser remembers on its own. Explorers and their progress live in the cloud;
+// the copies here make the game start fast and keep working without internet.
+const PREFS = 'word-adventure.prefs'
+const SESSION = 'word-adventure.session'
+const CACHE = 'word-adventure.cache.'
+const PUBLIC = 'word-adventure.public'
+// Saved by the first version of the game, before explorers moved to the cloud.
+const LEGACY = 'word-adventure.v1'
 
-const empty = () => ({ profiles: [], activeId: null, sound: true })
-
-export function loadStore() {
+function read(key, fallback) {
   try {
-    const raw = localStorage.getItem(KEY)
-    if (!raw) return empty()
-    return { ...empty(), ...JSON.parse(raw) }
+    const raw = localStorage.getItem(key)
+    return raw ? JSON.parse(raw) : fallback
   } catch {
-    return empty()
+    return fallback
   }
 }
 
-export function saveStore(store) {
+function write(key, value) {
   try {
-    localStorage.setItem(KEY, JSON.stringify(store))
+    if (value === null) localStorage.removeItem(key)
+    else localStorage.setItem(key, JSON.stringify(value))
   } catch {
     // Storage can be full or blocked (private mode); the game still runs for this visit.
   }
 }
 
+export function loadPrefs() {
+  const prefs = read(PREFS, null) ?? { sound: read(LEGACY, {}).sound ?? true }
+  if (!prefs.deviceId) {
+    prefs.deviceId = Math.random().toString(36).slice(2, 12)
+    write(PREFS, prefs)
+  }
+  return prefs
+}
+
+export const savePrefs = (prefs) => write(PREFS, prefs)
+
+// The explorer currently playing on this device: stays signed in until "Switch explorer".
+export const loadSession = () => read(SESSION, null)
+export const saveSession = (session) => write(SESSION, session)
+
+// Last known copy of an explorer's progress, plus whether it still needs uploading.
+export const loadCache = (id) => read(CACHE + id, null)
+export const saveCache = (id, entry) => write(CACHE + id, entry)
+
+export const loadPublicCache = () => read(PUBLIC, [])
+export const savePublicCache = (list) => write(PUBLIC, list)
+
+export function loadLegacy() {
+  return read(LEGACY, { profiles: [] }).profiles ?? []
+}
+
+export function removeLegacy(id) {
+  const store = read(LEGACY, null)
+  if (!store) return
+  const profiles = store.profiles.filter((p) => p.id !== id)
+  write(LEGACY, profiles.length ? { ...store, profiles, activeId: null } : null)
+}
+
 export const AVATARS = ['🦊', '🐼', '🐯', '🐸', '🦉', '🐙', '🦄', '🐧', '🐨', '🦁', '🐳', '🐝']
 export const AVATAR_COLORS = ['#FF9F68', '#4FA3F7', '#2EC4A6', '#FF7EB6', '#8E7CF0', '#F7B32B']
-
-export function newProfile({ name, avatar, color, level, topics }) {
-  return {
-    id: Math.random().toString(36).slice(2, 10),
-    name,
-    avatar,
-    color,
-    level,
-    topics,
-    dailyGoal: 50,
-    xp: 0,
-    today: { date: todayKey(), xp: 0 },
-    streak: { count: 0, last: null },
-    cards: {},
-    custom: [],
-    createdAt: Date.now(),
-  }
-}
-
-export function todayKey(d = new Date()) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
-function dayDiff(a, b) {
-  return Math.round((new Date(b) - new Date(a)) / 86400000)
-}
-
-// Adds XP and keeps the daily total and the streak up to date.
-export function awardXp(profile, amount) {
-  const key = todayKey()
-  const today = profile.today?.date === key ? profile.today : { date: key, xp: 0 }
-  let streak = profile.streak
-  if (streak.last !== key) {
-    const gap = streak.last ? dayDiff(streak.last, key) : null
-    streak = { count: gap === 1 ? streak.count + 1 : 1, last: key }
-  }
-  return { ...profile, xp: profile.xp + amount, today: { ...today, xp: today.xp + amount }, streak }
-}
-
-// A streak is only "alive" if the player practiced today or yesterday.
-export function liveStreak(profile) {
-  const { count, last } = profile.streak
-  if (!last) return 0
-  return dayDiff(last, todayKey()) <= 1 ? count : 0
-}
-
-export function todayXp(profile) {
-  return profile.today?.date === todayKey() ? profile.today.xp : 0
-}
-
-// Explorer rank grows with XP: each rank needs a bit more than the last.
-export function rankInfo(xp) {
-  let rank = 1
-  let need = 100
-  let floor = 0
-  while (xp >= floor + need) {
-    floor += need
-    rank += 1
-    need = 100 + (rank - 1) * 50
-  }
-  return { rank, into: xp - floor, need }
-}

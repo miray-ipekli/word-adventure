@@ -1,0 +1,43 @@
+rules_version = '2';
+
+// profiles/{id}  public card shown on the start screen (name, avatar, level, rank, streak)
+// progress/{key} private progress. The key is a SHA-256 of profile id + PIN, so a document
+//                can only be found by someone who knows the PIN. Listing is never allowed.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function validProfile(d) {
+      return d.keys().hasOnly(['name', 'avatar', 'color', 'level', 'rank', 'streak', 'hidden', 'createdAt', 'updatedAt'])
+        && d.name is string && d.name.size() > 0 && d.name.size() <= 20
+        && d.avatar is string && d.avatar.size() <= 16
+        && d.color is string && d.color.size() <= 9
+        && d.level in ['beginner', 'intermediate', 'advanced']
+        && d.rank is int && d.streak is int
+        && d.hidden is bool
+        && d.createdAt is int && d.updatedAt is int;
+    }
+
+    function validProgress(d) {
+      return d.keys().hasOnly(['profileId', 'data', 'updatedAt'])
+        && d.profileId is string && d.profileId.size() <= 20
+        && d.data is map
+        && d.updatedAt is int;
+    }
+
+    match /profiles/{id} {
+      allow get, list: if true;
+      allow create: if id.size() <= 20 && validProfile(request.resource.data);
+      allow update: if validProfile(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if false;
+    }
+
+    match /progress/{key} {
+      allow get, delete: if key.size() == 64;
+      allow list: if false;
+      allow create: if key.size() == 64 && validProgress(request.resource.data);
+      allow update: if key.size() == 64 && validProgress(request.resource.data)
+        && request.resource.data.profileId == resource.data.profileId;
+    }
+  }
+}

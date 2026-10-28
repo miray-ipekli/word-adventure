@@ -2011,6 +2011,146 @@ p {
   color: var(--bad);
 }
 
+/* ---------- PIN, cloud and sync ---------- */
+
+.notice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 16px;
+  max-width: 640px;
+  font-weight: 600;
+}
+
+.unlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.pinpad {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.pin-dots {
+  display: flex;
+  gap: 14px;
+}
+
+.pin-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: var(--line);
+  background: var(--paper);
+  transition: background 0.1s;
+}
+
+.pin-dot.is-on {
+  background: var(--sun);
+  animation: pop 0.2s;
+}
+
+.pinpad.is-error .pin-dots {
+  animation: shake 0.35s;
+}
+
+.pin-message {
+  min-height: 1.5em;
+  font-weight: 700;
+  color: var(--bad);
+}
+
+.pin-keys {
+  display: grid;
+  grid-template-columns: repeat(3, 72px);
+  gap: 10px;
+}
+
+.pin-key {
+  height: 60px;
+  border: var(--line);
+  border-radius: 16px;
+  background: var(--paper);
+  box-shadow: var(--lift-sm);
+  font-family: var(--display);
+  font-size: 1.6rem;
+  font-weight: 600;
+}
+
+.pin-key:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: none;
+}
+
+.pin-key:disabled {
+  opacity: 0.5;
+}
+
+.new-pin {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.new-pin-step {
+  font-family: var(--display);
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.step-pin {
+  align-items: center;
+  text-align: center;
+}
+
+.migrate-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.migrate-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+  background: var(--paper-2);
+}
+
+.sync {
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 2px 10px;
+  border-radius: 999px;
+  border: 2px solid var(--ink);
+  background: var(--good-bg);
+  white-space: nowrap;
+}
+
+.sync-saving {
+  background: var(--paper-2);
+}
+
+.sync-offline {
+  background: var(--bad-bg);
+}
+
 /* ---------- Motion ---------- */
 
 @keyframes bob {

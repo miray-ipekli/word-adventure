@@ -111,13 +111,14 @@ export function questionTypeFor(card, profile, caps) {
 export function applyAnswer(card, correct, now = Date.now()) {
   const base = card ?? { box: 1, due: now, lapses: 0, right: 0, wrong: 0, focus: false }
   if (correct) {
-    if (base.box >= MASTERED_BOX) return { ...base, right: base.right + 1, due: now + MASTERED_REVIEW }
+    if (base.box >= MASTERED_BOX) return { ...base, right: base.right + 1, due: now + MASTERED_REVIEW, at: now }
     const box = base.box + 1
     return {
       ...base,
       box,
       right: base.right + 1,
       due: now + WAIT_AFTER[box],
+      at: now,
       // A tricky word stops being tricky once it climbs back to the harder questions.
       focus: box >= 4 ? false : base.focus,
     }
@@ -129,18 +130,19 @@ export function applyAnswer(card, correct, now = Date.now()) {
     wrong: base.wrong + 1,
     due: now,
     focus: true,
+    at: now,
   }
 }
 
 export function discoverCard(alreadyKnown, now = Date.now()) {
   // "I know this" still gets checked: it jumps ahead but is tested again tomorrow.
-  if (alreadyKnown) return { box: 3, due: now + DAY, lapses: 0, right: 0, wrong: 0, focus: false }
-  return { box: 1, due: now, lapses: 0, right: 0, wrong: 0, focus: false }
+  if (alreadyKnown) return { box: 3, due: now + DAY, lapses: 0, right: 0, wrong: 0, focus: false, at: now }
+  return { box: 1, due: now, lapses: 0, right: 0, wrong: 0, focus: false, at: now }
 }
 
 export function focusCard(card, now = Date.now()) {
   const base = card ?? { box: 1, lapses: 0, right: 0, wrong: 0 }
-  return { ...base, box: Math.min(base.box, 3), due: now, focus: true }
+  return { ...base, box: Math.min(base.box, 3), due: now, focus: true, at: now }
 }
 
 function shuffle(list) {
