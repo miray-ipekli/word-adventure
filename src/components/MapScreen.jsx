@@ -1,19 +1,8 @@
 import { useState } from 'react'
 import { CUSTOM_TOPIC, topicById } from '../data/topics.js'
 import { liveStreak, rankInfo, todayXp, totalXp } from '../lib/progress.js'
-import {
-  activeWords,
-  chestProgress,
-  dueCount,
-  levelName,
-  nextDueAt,
-  nextLevel,
-  statusOf,
-  topicStats,
-  trickyWords,
-  unlockProgress,
-  UNLOCK_NEED,
-} from '../lib/srs.js'
+import { activeWords, dueCount, levelName, nextDueAt, nextLevel, trickyWords } from '../lib/srs.js'
+import { chestProgress } from '../lib/islands.js'
 import { play } from '../lib/sound.js'
 import { Avatar } from './Pickers.jsx'
 import IslandMap from './IslandMap.jsx'
@@ -85,7 +74,6 @@ function formatWait(ms) {
 
 export default function MapScreen(props) {
   const { profile, sound, sync, onIsland, onReview, onTricky, onSpeak, onWords, onSettings, onSwitch, onLevelUp } = props
-  const [sheet, setSheet] = useState(null)
   const [chestOpen, setChestOpen] = useState(false)
 
   const due = dueCount(profile)
@@ -96,7 +84,7 @@ export default function MapScreen(props) {
 
   const openIsland = (topicId, order) => {
     play('tap')
-    setSheet({ topicId, order })
+    onIsland(topicId, order)
   }
 
   return (
@@ -189,18 +177,6 @@ export default function MapScreen(props) {
         </aside>
       </div>
 
-      {sheet && (
-        <IslandSheet
-          profile={profile}
-          {...sheet}
-          onClose={() => setSheet(null)}
-          onStart={() => {
-            setSheet(null)
-            onIsland(sheet.topicId)
-          }}
-        />
-      )}
-
       {chestOpen && (
         <Modal onClose={() => setChestOpen(false)} label="Treasure chest">
           <div className="chest-dialog">
@@ -211,7 +187,7 @@ export default function MapScreen(props) {
               <>
                 <h2 className="title-lg">Treasure found!</h2>
                 <p>
-                  {chest.strong} of {chest.total} {levelName(profile.level)} words are strong. You are ready for{' '}
+                  You conquered all {chest.total} islands at {levelName(profile.level)} level. You are ready for{' '}
                   <strong>{upcoming.name}</strong>. Your progress so far stays with you.
                 </p>
                 <div className="form-actions">
@@ -240,14 +216,14 @@ export default function MapScreen(props) {
               <>
                 <h2 className="title-lg">The chest is locked</h2>
                 <p>
-                  It opens when 80% of your {levelName(profile.level)} words are strong. Right now:{' '}
+                  It opens when you have conquered all {chest.total} islands. Islands conquered so far:{' '}
                   <strong>
-                    {chest.strong} / {chest.total}
+                    {chest.conquered} / {chest.total}
                   </strong>
-                  . A word becomes strong after you answer it correctly on several different days.
+                  . Each island ends with a castle: a role-play scene and a final exam.
                 </p>
                 <div className="meter">
-                  <span style={{ width: `${chest.total ? (chest.strong / chest.total) * 100 : 0}%` }} />
+                  <span style={{ width: `${chest.total ? (chest.conquered / chest.total) * 100 : 0}%` }} />
                 </div>
               </>
             )}
@@ -255,79 +231,5 @@ export default function MapScreen(props) {
         </Modal>
       )}
     </div>
-  )
-}
-
-const STATUS_LABEL = { new: 'New', learning: 'Learning', tricky: 'Tricky', mastered: 'Mastered' }
-
-function IslandSheet({ profile, topicId, order, onClose, onStart }) {
-  const topic = topicById(topicId)
-  const stats = topicStats(profile, topicId)
-  const words = activeWords(profile, topicId)
-  const unlock = order >= 0 ? unlockProgress(profile, order) : { unlocked: true }
-  const prevTopic = order > 0 ? topicById(profile.topics[order - 1]) : null
-  const action = stats.due || stats.new ? 'Explore island' : 'Extra practice'
-
-  return (
-    <Modal onClose={onClose} label={topic.name}>
-      <div className="sheet" style={{ '--topic': topic.color }}>
-        <div className="sheet-head">
-          <span className="sheet-icon" aria-hidden="true">
-            {unlock.unlocked ? topic.icon : '🔒'}
-          </span>
-          <div>
-            <h2 className="title-lg">{topic.name}</h2>
-            <p className="muted">
-              {levelName(profile.level)} · {stats.total} words
-            </p>
-          </div>
-        </div>
-
-        {!unlock.unlocked ? (
-          <p className="locked-note">
-            Answer {UNLOCK_NEED} words correctly on <strong>{prevTopic.name}</strong> to open this island.{' '}
-            <span className="tabular">
-              ({unlock.have}/{UNLOCK_NEED})
-            </span>
-          </p>
-        ) : (
-          <>
-            <div className="stat-row">
-              {['new', 'learning', 'tricky', 'mastered'].map((k) => (
-                <div key={k} className={`stat stat-${k}`}>
-                  <strong className="tabular">{stats[k]}</strong>
-                  <span>{STATUS_LABEL[k]}</span>
-                </div>
-              ))}
-            </div>
-            <ul className="word-chips">
-              {words.map((w) => {
-                const s = statusOf(profile.cards[w.id])
-                return (
-                  <li key={w.id} className={`word-chip is-${s}`} title={s === 'new' ? 'Not discovered yet' : w.tr}>
-                    {s === 'new' ? '???' : w.en}
-                  </li>
-                )
-              })}
-            </ul>
-            {stats.due > 0 && <p className="muted">{stats.due} word(s) here are due for review.</p>}
-            {!stats.due && !stats.new && (
-              <p className="muted">Every word here is scheduled. Extra practice earns XP without changing your schedule.</p>
-            )}
-          </>
-        )}
-
-        <div className="form-actions">
-          <button type="button" className="btn btn-ghost" onClick={onClose}>
-            Close
-          </button>
-          {unlock.unlocked && (
-            <button type="button" className="btn btn-primary" disabled={!stats.total} onClick={onStart}>
-              {action}
-            </button>
-          )}
-        </div>
-      </div>
-    </Modal>
   )
 }

@@ -73,7 +73,9 @@ export function Discover({ word, onDone }) {
 
 export function Question({ word, type: asked, profile, locked, onResult, onSwitchType }) {
   // Own words may have no usable example sentence; then the gap question becomes a word choice.
-  const type = asked === 'gap' && !gapSentence(word) ? 'reverse' : asked
+  let type = asked
+  if (type === 'gap' && !gapSentence(word)) type = 'reverse'
+  if (type === 'order' && !word.ex) type = profile.level === 'beginner' ? 'build' : 'type'
   const label = QUESTION_LABEL[type]
   return (
     <div className="q-card">
@@ -82,6 +84,15 @@ export function Question({ word, type: asked, profile, locked, onResult, onSwitc
         <ChoiceQuestion word={word} type={type} profile={profile} locked={locked} onResult={onResult} />
       )}
       {type === 'build' && <BuildQuestion word={word} locked={locked} onResult={onResult} />}
+      {type === 'order' && (
+        <>
+          <div className="q-prompt">
+            <h2 className="word-xl word-tr">{word.tr}</h2>
+            <p className="muted">Use “{word.en}” in a sentence</p>
+          </div>
+          <SentenceBuilder sentence={word.ex} locked={locked} onResult={onResult} />
+        </>
+      )}
       {type === 'type' && <TypeQuestion word={word} locked={locked} onResult={onResult} />}
       {type === 'speak' && <SpeakQuestion word={word} locked={locked} onResult={onResult} onSkip={() => onSwitchType('type')} />}
     </div>
@@ -211,6 +222,60 @@ function BuildQuestion({ word, locked, onResult }) {
             </button>
           )
         })}
+      </div>
+    </>
+  )
+}
+
+const tokenKey = (t) => t.toLowerCase().replace(/[^a-z0-9'’-]/g, '')
+
+// Word tiles to put in order. Used for phrases, the Story Tower and the role-play fallback.
+export function SentenceBuilder({ sentence, locked, onResult }) {
+  const tokens = useMemo(() => sentence.split(/\s+/).map((t, i) => ({ t, i, key: tokenKey(t) })), [sentence])
+  const tiles = useMemo(() => {
+    let mixed = shuffle(tokens)
+    for (let n = 0; n < 5 && tokens.length > 1 && mixed.every((x, i) => x.key === tokens[i].key); n++) mixed = shuffle(tokens)
+    return mixed
+  }, [tokens])
+  const [placed, setPlaced] = useState([])
+  const [done, setDone] = useState(false)
+
+  const add = (tile) => {
+    if (done || locked) return
+    play('tap')
+    const next = [...placed, tile]
+    setPlaced(next)
+    if (next.length === tokens.length) {
+      setDone(true)
+      onResult(next.every((x, i) => x.key === tokens[i].key))
+    }
+  }
+
+  return (
+    <>
+      <div className="order-answer" aria-label="Your sentence">
+        {placed.length ? (
+          placed.map((tile, k) => (
+            <button key={tile.i} type="button" className="tile tile-word is-placed" onClick={() => !done && setPlaced(placed.filter((_, j) => j !== k))}>
+              {tile.t}
+            </button>
+          ))
+        ) : (
+          <span className="muted">Tap the words in the right order</span>
+        )}
+      </div>
+      <div className="build-tiles">
+        {tiles.map((tile) => (
+          <button
+            key={tile.i}
+            type="button"
+            className="tile tile-word"
+            disabled={done || placed.some((p) => p.i === tile.i)}
+            onClick={() => add(tile)}
+          >
+            {tile.t}
+          </button>
+        ))}
       </div>
     </>
   )

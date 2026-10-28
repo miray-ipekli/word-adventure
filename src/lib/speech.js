@@ -36,6 +36,44 @@ export function speak(text, { slow = false } = {}) {
   window.speechSynthesis.speak(u)
 }
 
+// Reads several lines one after another. Returns a function that stops reading.
+export function speakLines(lines, { onLine, onEnd } = {}) {
+  if (!caps.tts) return () => {}
+  let stopped = false
+  window.speechSynthesis.cancel()
+  const say = (i) => {
+    if (stopped) return
+    if (i >= lines.length) return onEnd?.()
+    onLine?.(i)
+    const u = new SpeechSynthesisUtterance(lines[i])
+    u.lang = 'en-US'
+    if (voice) u.voice = voice
+    u.rate = 0.9
+    u.onend = () => say(i + 1)
+    u.onerror = () => say(i + 1)
+    window.speechSynthesis.speak(u)
+  }
+  say(0)
+  return () => {
+    stopped = true
+    window.speechSynthesis.cancel()
+    onEnd?.()
+  }
+}
+
+// Speaks one line and calls onEnd when it has been read out.
+export function speakThen(text, onEnd) {
+  if (!caps.tts) return onEnd?.()
+  window.speechSynthesis.cancel()
+  const u = new SpeechSynthesisUtterance(text)
+  u.lang = 'en-US'
+  if (voice) u.voice = voice
+  u.rate = 0.95
+  u.onend = () => onEnd?.()
+  u.onerror = () => onEnd?.()
+  window.speechSynthesis.speak(u)
+}
+
 // Listens once and resolves with the possible transcripts, best guess first.
 export function listen({ onStart } = {}) {
   return new Promise((resolve, reject) => {

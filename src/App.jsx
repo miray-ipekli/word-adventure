@@ -9,15 +9,19 @@ import {
   savePublicCache,
   saveSession,
 } from './lib/storage.js'
-import { awardXp, mergeProgress, newProgress } from './lib/progress.js'
+import { awardXp, mergeProgress, newProgress, todayKey } from './lib/progress.js'
 import { changePin, createProfile, deleteProfile, keyFor, newProfileId, saveProgress, unlock, watchProfiles } from './lib/cloud.js'
 import { applyAnswer, buildSession, discoverCard, focusCard } from './lib/srs.js'
+import { buildExam, islandKey, islandSessionOptions, legacyOpenCount } from './lib/islands.js'
 import { caps } from './lib/speech.js'
 import { setSoundEnabled } from './lib/sound.js'
 import ProfilePicker from './components/ProfilePicker.jsx'
 import Onboarding from './components/Onboarding.jsx'
 import MapScreen from './components/MapScreen.jsx'
 import Session from './components/Session.jsx'
+import IslandScreen from './components/IslandScreen.jsx'
+import StoryTower from './components/StoryTower.jsx'
+import RolePlay from './components/RolePlay.jsx'
 import SpeakStudio from './components/SpeakStudio.jsx'
 import MyWords from './components/MyWords.jsx'
 import Settings from './components/Settings.jsx'
@@ -38,6 +42,7 @@ export default function App() {
   const [profile, setProfile] = useState(start.profile)
   const [screen, setScreen] = useState(start.profile ? 'map' : 'profiles')
   const [run, setRun] = useState(null)
+  const [island, setIsland] = useState(null)
   const [explorers, setExplorers] = useState(loadPublicCache)
   const [listStatus, setListStatus] = useState('loading')
   const [sync, setSync] = useState('saved')
@@ -186,10 +191,28 @@ export default function App() {
     }
   }
 
+  // Explorers who played before island conquest keep the islands they had already opened.
+  useEffect(() => {
+    if (profile && !profile.openIslands) updateProfile((p) => (p.openIslands ? p : { ...p, openIslands: { [p.level]: legacyOpenCount(p) } }))
+  }, [profile?.id, profile?.openIslands])
+
   const startRun = (opts) => {
-    setRun({ ...opts, steps: buildSession(profile, { ...opts, caps }), key: Date.now() })
+    const steps = opts.mode === 'exam' ? buildExam(profile, opts.topicId, caps) : buildSession(profile, { ...opts, caps })
+    setRun({ ...opts, steps, key: Date.now() })
     setScreen('session')
   }
+
+  const openIsland = (topicId) => {
+    setIsland(topicId)
+    setScreen('island')
+  }
+
+  // Records a step of island conquest (story read, scene played, exam passed or failed).
+  const markIsland = (topicId, fields) =>
+    updateProfile((p) => {
+      const key = islandKey(p.level, topicId)
+      return { ...p, islands: { ...p.islands, [key]: { ...p.islands?.[key], ...fields } } }
+    })
 
   const actions = {
     answer: (wordId, correct) => setCard(wordId, (c) => applyAnswer(c, correct)),
@@ -201,6 +224,11 @@ export default function App() {
   const goMap = () => {
     setRun(null)
     setScreen('map')
+  }
+
+  const backToIsland = () => {
+    setRun(null)
+    setScreen('island')
   }
 
   // ---- Screens without a signed-in explorer ----
@@ -243,7 +271,42 @@ export default function App() {
           mode={run.mode}
           topicId={run.topicId}
           actions={actions}
-          onExit={goMap}
+          onExamDone={(passed) =>
+            markIsland(run.topicId, passed ? { examPassedAt: Date.now() } : { examFailedOn: todayKey() })
+          }
+          onExit={run.mode === 'island' || run.mode === 'exam' ? backToIsland : goMap}
+        />
+      )
+    case 'island':
+      return (
+        <IslandScreen
+          profile={profile}
+          topicId={island}
+          onPlay={() => startRun(islandSessionOptions(profile, island))}
+          onStory={() => setScreen('story')}
+          onRolePlay={() => setScreen('roleplay')}
+          onExam={() => startRun({ mode: 'exam', topicId: island })}
+          onBack={goMap}
+        />
+      )
+    case 'story':
+      return (
+        <StoryTower
+          profile={profile}
+          topicId={island}
+          actions={actions}
+          onDone={() => markIsland(island, { storyAt: Date.now() })}
+          onExit={backToIsland}
+        />
+      )
+    case 'roleplay':
+      return (
+        <RolePlay
+          profile={profile}
+          topicId={island}
+          actions={actions}
+          onDone={() => markIsland(island, { roleplayAt: Date.now() })}
+          onExit={backToIsland}
         />
       )
     case 'speak':
@@ -306,7 +369,7 @@ export default function App() {
           profile={profile}
           sound={soundToggle}
           sync={sync}
-          onIsland={(topicId) => startRun({ mode: 'island', topicId })}
+          onIsland={openIsland}
           onReview={() => startRun({ mode: 'review' })}
           onTricky={() => startRun({ mode: 'tricky' })}
           onSpeak={() => setScreen('speak')}

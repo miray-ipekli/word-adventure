@@ -1,6 +1,26 @@
 // Each topic becomes an island on the map. Every level has its own word set.
 // Word entries are [english, turkish, example sentence]. The example must contain
 // the English word exactly, because the "fill the gap" question blanks it out.
+// The first six words of each level live here; the rest of an island (six more words,
+// phrases, a story and a role-play scene) lives in ./content/<topic>.js.
+import daily from './content/daily.js'
+import food from './content/food.js'
+import travel from './content/travel.js'
+import airport from './content/airport.js'
+import office from './content/office.js'
+import interviews from './content/interviews.js'
+import school from './content/school.js'
+import tech from './content/tech.js'
+import hobbies from './content/hobbies.js'
+import nature from './content/nature.js'
+import animals from './content/animals.js'
+import feelings from './content/feelings.js'
+import music from './content/music.js'
+import sports from './content/sports.js'
+import movies from './content/movies.js'
+import shopping from './content/shopping.js'
+
+const CONTENT = { daily, food, travel, airport, office, interviews, school, tech, hobbies, nature, animals, feelings, music, sports, movies, shopping }
 
 export const LEVELS = [
   { id: 'beginner', name: 'Beginner', hint: 'cat, happy, ticket', blurb: 'First words and short sentences.' },
@@ -484,16 +504,35 @@ export const topicById = (id) => (id === CUSTOM_TOPIC.id ? CUSTOM_TOPIC : TOPICS
 
 const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
 
-// Flat list of every built-in word with a stable id.
-export const ALL_WORDS = TOPICS.flatMap((topic) =>
-  LEVELS.flatMap((level) =>
-    topic.words[level.id].map(([en, tr, ex]) => ({
+// Flat list of every built-in word and phrase with a stable id. Word ids must never change,
+// because saved progress is keyed by them.
+export const ALL_ITEMS = TOPICS.flatMap((topic) =>
+  LEVELS.flatMap((level) => {
+    const extra = CONTENT[topic.id][level.id]
+    const words = [...topic.words[level.id], ...extra.words].map(([en, tr, ex]) => ({
       id: `${topic.id}.${level.id}.${slug(en)}`,
+      kind: 'word',
       en,
       tr,
       ex,
       topic: topic.id,
       level: level.id,
-    })),
-  ),
+    }))
+    const phrases = extra.phrases.map(([en, tr, ex]) => ({
+      id: `${topic.id}.${level.id}.p.${slug(en)}`,
+      kind: 'phrase',
+      en,
+      tr,
+      ex,
+      topic: topic.id,
+      level: level.id,
+    }))
+    return [...words, ...phrases]
+  }),
 )
+
+// The story (Story Tower) and role-play scene (Castle) of one island.
+export function islandContent(topicId, level) {
+  const c = CONTENT[topicId]?.[level]
+  return c ? { story: c.story, roleplay: c.roleplay } : null
+}

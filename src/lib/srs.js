@@ -1,15 +1,17 @@
 // Spaced repetition. Each word climbs through boxes 1-6; every box asks a harder kind of
 // question, and a word only counts as mastered after passing all of them on different days.
 // A wrong answer drops the word two boxes and marks it as tricky, so it comes back sooner.
-import { ALL_WORDS, CUSTOM_TOPIC, LEVELS } from '../data/topics.js'
+import { ALL_ITEMS, CUSTOM_TOPIC, LEVELS } from '../data/topics.js'
 
 const MIN = 60 * 1000
 const DAY = 24 * 60 * MIN
 
 // How long to wait before showing a word again once it reaches a box.
-const WAIT_AFTER = { 1: 0, 2: 10 * MIN, 3: DAY, 4: 2 * DAY, 5: 4 * DAY, 6: 10 * DAY }
+export const WAIT_AFTER = { 1: 0, 2: 10 * MIN, 3: DAY, 4: 2 * DAY, 5: 4 * DAY, 6: 10 * DAY }
 const MASTERED_REVIEW = 30 * DAY
 export const MASTERED_BOX = 6
+// A word or phrase at box 5 has been recalled correctly on three different days.
+export const STRONG_BOX = 5
 
 export const QUESTION_LABEL = {
   meaning: 'What does it mean?',
@@ -19,18 +21,20 @@ export const QUESTION_LABEL = {
   build: 'Build the word',
   type: 'Type it in English',
   speak: 'Say it out loud',
+  order: 'Put the words in order',
 }
 
 export function wordsFor(profile) {
-  const custom = profile.custom.map((w) => ({ ...w, topic: CUSTOM_TOPIC.id, level: profile.level }))
-  return [...ALL_WORDS, ...custom]
+  const custom = profile.custom.map((w) => ({ ...w, kind: 'word', topic: CUSTOM_TOPIC.id, level: profile.level }))
+  return [...ALL_ITEMS, ...custom]
 }
 
 export function wordIndex(profile) {
   return new Map(wordsFor(profile).map((w) => [w.id, w]))
 }
 
-// Words the player should be learning right now: their topics at their level, plus their own words.
+// Words and phrases the player should be learning right now: their topics at their level,
+// plus their own words.
 export function activeWords(profile, topicId) {
   return wordsFor(profile).filter((w) => {
     if (topicId) return w.topic === topicId && (w.topic === CUSTOM_TOPIC.id || w.level === profile.level)
@@ -57,13 +61,14 @@ export function isDue(card, now = Date.now()) {
 export function topicStats(profile, topicId) {
   const words = activeWords(profile, topicId)
   const stats = { total: words.length, new: 0, learning: 0, tricky: 0, mastered: 0, started: 0, strong: 0, due: 0, progress: 0 }
+  // strong: recalled on three different days (box 5+), the bar for conquering an island
   const now = Date.now()
   let boxes = 0
   for (const w of words) {
     const card = profile.cards[w.id]
     stats[statusOf(card)] += 1
     if (card) stats.started += 1
-    if (card && card.box >= 4) stats.strong += 1
+    if (card && card.box >= STRONG_BOX) stats.strong += 1
     if (isDue(card, now)) stats.due += 1
     boxes += Math.min(card?.box ?? 0, MASTERED_BOX)
   }
@@ -84,11 +89,12 @@ export function trickyWords(profile) {
     .map(([id]) => index.get(id))
 }
 
-export function questionTypeFor(card, profile, caps) {
+export function questionTypeFor(card, profile, caps, word) {
   const box = card?.box ?? 1
   const canListen = caps.tts
   const canSpeak = caps.mic && profile.micOn !== false
-  const build = profile.level === 'beginner' ? 'build' : 'type'
+  // Beginners build words from letter tiles and phrases from word tiles instead of typing.
+  const build = profile.level !== 'beginner' ? 'type' : word?.kind === 'phrase' ? 'order' : 'build'
   switch (box) {
     case 1:
       return 'meaning'
@@ -156,7 +162,8 @@ function shuffle(list) {
 
 // Builds the list of steps for one play session.
 // mode: 'island' (one topic), 'review' (everything due), 'tricky' (boss words only)
-export function buildSession(profile, { mode, topicId, caps, size = 10 }) {
+// allowPhrases: an island only introduces its phrases once the Phrase Cave is open.
+export function buildSession(profile, { mode, topicId, caps, allowPhrases = true, size = 10 }) {
   const now = Date.now()
   const index = wordIndex(profile)
   const started = Object.entries(profile.cards)
@@ -173,14 +180,17 @@ export function buildSession(profile, { mode, topicId, caps, size = 10 }) {
   reviews.sort((a, b) => Number(isTricky(b.card)) - Number(isTricky(a.card)) || a.card.due - b.card.due)
 
   // Islands mix reviews with a few new words; review and tricky runs only revisit known words.
-  const unseen = mode === 'island' ? activeWords(profile, topicId).filter((w) => !profile.cards[w.id]) : []
+  const unseen =
+    mode === 'island'
+      ? activeWords(profile, topicId).filter((w) => !profile.cards[w.id] && (allowPhrases || w.kind !== 'phrase'))
+      : []
   const maxNew = profile.level === 'beginner' ? 3 : 4
   const freshCount = Math.min(maxNew, unseen.length, Math.max(1, Math.floor((size - reviews.length) / 2)))
   const fresh = unseen.slice(0, freshCount)
   const chosenReviews = reviews.slice(0, Math.max(0, size - fresh.length * 2))
 
   const reviewSteps = shuffle(
-    chosenReviews.map(({ word, card }) => ({ kind: 'quiz', wordId: word.id, type: questionTypeFor(card, profile, caps) })),
+    chosenReviews.map(({ word, card }) => ({ kind: 'quiz', wordId: word.id, type: questionTypeFor(card, profile, caps, word) })),
   )
 
   // New words are quizzed one step after the next word is introduced, so the answer
@@ -209,7 +219,7 @@ export function buildSession(profile, { mode, topicId, caps, size = 10 }) {
     return known.map(({ word, card }) => ({
       kind: 'quiz',
       wordId: word.id,
-      type: questionTypeFor(card, profile, caps),
+      type: questionTypeFor(card, profile, caps, word),
       practice: true,
     }))
   }
@@ -229,7 +239,7 @@ export function distractors(word, profile, field, count = 3) {
   const pool = wordsFor(profile).filter((w) => w.id !== word.id && w[field] !== word[field])
   const ranked = shuffle(pool).sort((a, b) => score(b) - score(a))
   function score(w) {
-    return (w.level === word.level ? 2 : 0) + (w.topic === word.topic ? 1 : 0)
+    return (w.kind === word.kind ? 4 : 0) + (w.level === word.level ? 2 : 0) + (w.topic === word.topic ? 1 : 0)
   }
   const picked = []
   const seen = new Set([norm(word[field])])
@@ -285,26 +295,4 @@ export function levelName(id) {
 export function nextLevel(id) {
   const i = LEVELS.findIndex((l) => l.id === id)
   return LEVELS[i + 1] ?? null
-}
-
-// Islands open one after another: the next one opens once 3 words on the previous island
-// have been answered correctly at least once.
-export const UNLOCK_NEED = 3
-export function unlockProgress(profile, order) {
-  if (order <= 1) return { unlocked: true, have: UNLOCK_NEED }
-  const prev = profile.topics[order - 1]
-  const have = activeWords(profile, prev).filter((w) => (profile.cards[w.id]?.box ?? 0) >= 2).length
-  return { unlocked: have >= UNLOCK_NEED, have }
-}
-
-// The treasure chest opens when most words of the current level are strong (box 4+).
-export function chestProgress(profile) {
-  let total = 0
-  let strong = 0
-  for (const t of profile.topics) {
-    const s = topicStats(profile, t)
-    total += s.total
-    strong += s.strong
-  }
-  return { total, strong, ready: total > 0 && strong / total >= 0.8 }
 }

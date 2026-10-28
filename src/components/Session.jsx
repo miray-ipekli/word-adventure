@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { topicById } from '../data/topics.js'
 import { wordIndex } from '../lib/srs.js'
+import { passMark } from '../lib/islands.js'
 import { play } from '../lib/sound.js'
 import { Discover, Example, Question, SpeakerButton } from './Questions.jsx'
 import Confetti from './Confetti.jsx'
@@ -9,9 +10,11 @@ const PRAISE = ['Great!', 'Nice one!', 'Excellent!', 'You got it!', 'Brilliant!'
 const MAX_RETRIES = 2
 
 // After a miss, the word comes back a few steps later with an easier question.
-const EASIER = { speak: 'gap', type: 'gap', build: 'gap', gap: 'reverse', listen: 'meaning', reverse: 'meaning', meaning: 'meaning' }
+const EASIER = { speak: 'gap', type: 'gap', build: 'gap', order: 'gap', gap: 'reverse', listen: 'meaning', reverse: 'meaning', meaning: 'meaning' }
 
-export default function Session({ profile, steps: initialSteps, mode, topicId, actions, onExit }) {
+// mode 'exam' is the Castle's final exam: no second chances, a pass mark, and correct answers
+// do not move words forward (only misses are recorded, so they come back as tricky words).
+export default function Session({ profile, steps: initialSteps, mode, topicId, actions, onExamDone, onExit }) {
   const index = useMemo(() => wordIndex(profile), [profile])
   const [steps, setSteps] = useState(initialSteps)
   const [at, setAt] = useState(0)
@@ -23,11 +26,17 @@ export default function Session({ profile, steps: initialSteps, mode, topicId, a
   const step = steps[at]
   const word = step ? index.get(step.wordId) : null
   const finished = at >= steps.length
-  const title = mode === 'island' ? topicById(topicId)?.name : mode === 'tricky' ? 'Tricky words' : 'Daily review'
+  const exam = mode === 'exam'
+  const title = { island: topicById(topicId)?.name, exam: 'Castle exam', tricky: 'Tricky words' }[mode] ?? 'Daily review'
+  const score = tally.right + tally.wrong ? tally.right / (tally.right + tally.wrong) : 0
+  const passed = exam && score >= passMark(profile.level)
 
   useEffect(() => {
-    if (finished && steps.length) play('fanfare')
-  }, [finished, steps.length])
+    if (!finished || !steps.length) return
+    play(exam && !passed ? 'wrong' : 'fanfare')
+    if (exam) onExamDone(passed)
+    // Runs once, when the last step is answered.
+  }, [finished])
 
   const next = () => {
     setFeedback(null)
@@ -50,7 +59,7 @@ export default function Session({ profile, steps: initialSteps, mode, topicId, a
   }
 
   const onResult = (correct, note, kind) => {
-    if (!step.practice || !correct) actions.answer(word.id, correct)
+    if ((!step.practice && !step.exam) || !correct) actions.answer(word.id, correct)
     const newCombo = correct ? combo + 1 : 0
     setCombo(newCombo)
     setTally((t) => ({
@@ -65,7 +74,7 @@ export default function Session({ profile, steps: initialSteps, mode, topicId, a
     } else {
       play('wrong')
       const used = retries[word.id] ?? 0
-      if (used < MAX_RETRIES) {
+      if (!exam && used < MAX_RETRIES) {
         setRetries((r) => ({ ...r, [word.id]: used + 1 }))
         setSteps((s) => {
           const copy = [...s]
@@ -108,12 +117,21 @@ export default function Session({ profile, steps: initialSteps, mode, topicId, a
       .map(([id]) => index.get(id))
     return (
       <div className="screen sea-screen">
-        <Confetti />
+        {(!exam || passed) && <Confetti />}
         <div className="panel sticker end-card">
           <div className="big-icon" aria-hidden="true">
-            🏆
+            {exam ? (passed ? '🏰' : '🛡️') : '🏆'}
           </div>
-          <h2 className="title-lg">Adventure complete!</h2>
+          <h2 className="title-lg">
+            {!exam ? 'Adventure complete!' : passed ? `${topicById(topicId)?.name} is conquered!` : 'The castle held this time'}
+          </h2>
+          {exam && (
+            <p className={passed ? 'success-note' : 'muted'}>
+              {passed
+                ? 'Your flag is on the island and the next island is open. You can always come back here.'
+                : `You need ${Math.round(passMark(profile.level) * 100)}% to win. The words you missed are now tricky words. Practice them and try the castle again tomorrow.`}
+            </p>
+          )}
           <div className="stat-row">
             <div className="stat stat-xp">
               <strong className="tabular">+{tally.xp}</strong>
@@ -143,11 +161,17 @@ export default function Session({ profile, steps: initialSteps, mode, topicId, a
             </div>
           )}
           <button type="button" className="btn btn-primary" onClick={onExit} autoFocus>
-            Back to the map
+            {exam || mode === 'island' ? 'Back to the island' : 'Back to the map'}
           </button>
         </div>
       </div>
     )
+  }
+
+  // Leaving the exam half way counts as an attempt, so it cannot be retried right away.
+  const leave = () => {
+    if (exam && at > 0) onExamDone(false)
+    onExit()
   }
 
   const progress = (at / steps.length) * 100
@@ -155,7 +179,7 @@ export default function Session({ profile, steps: initialSteps, mode, topicId, a
   return (
     <div className="screen session-screen">
       <header className="session-top">
-        <button type="button" className="icon-btn" onClick={onExit} aria-label="Leave the adventure">
+        <button type="button" className="icon-btn" onClick={leave} aria-label="Leave the adventure">
           ✕
         </button>
         <div className="session-progress" aria-label={`Step ${at + 1} of ${steps.length}`}>
@@ -170,6 +194,7 @@ export default function Session({ profile, steps: initialSteps, mode, topicId, a
         <div className="panel sticker q-panel" key={`${at}-${step.type}`}>
           {step.retry && <span className="retry-tag">Second chance</span>}
           {step.practice && <span className="retry-tag">Practice</span>}
+          {step.exam && <span className="retry-tag">Castle exam · {at + 1}/{steps.length}</span>}
           {step.kind === 'discover' ? (
             <Discover word={word} onDone={onDiscover} />
           ) : (

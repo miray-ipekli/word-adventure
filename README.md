@@ -13,13 +13,22 @@ Sonra tarayıcıda http://localhost:5173 adresini aç. Mikrofonlu sorular için 
 
 ## Proje yapısı
 
-- `src/data/topics.js`: konular ve kelimeler (16 konu × 3 seviye × 6 kelime). Yeni kelime eklemek için buraya satır ekle.
+- `src/data/topics.js`: konular ve her seviyenin ilk 6 kelimesi. Kelime kimlikleri değişmemeli, kayıtlı ilerleme bunlara bağlı.
+- `src/data/content/<konu>.js`: adanın geri kalanı: 6 kelime daha, 6 kalıp, hikâye ve rol yapma sahnesi. `npm test` hepsini kontrol eder.
+- `src/lib/islands.js`: ada fethi kuralları (duraklar, kale, sınav, kilitler).
 - `src/lib/srs.js`: tekrar sistemi. Kelimeler 1–6 arası kutularda ilerler, yanlış cevapta 2 kutu geri düşer.
 - `src/lib/speech.js`: sesli okuma ve konuşma tanıma (tarayıcının kendi özelliği).
 - `src/lib/progress.js`: ilerleme verisi ve iki cihazdaki kopyaların birleştirilmesi.
 - `src/lib/cloud.js`: Firestore'a kaydetme, PIN ile giriş.
 - `src/lib/storage.js`: bu tarayıcıdaki yerel kopya (hızlı açılış ve internetsiz oynama için).
 - `src/components/`: ekranlar (harita, sorular, Speak Studio, My words, ayarlar).
+
+## Ada fethi
+
+Her ada 4 duraktan oluşur: Kelime Kampı → Kalıp Mağarası → Hikâye Kulesi → Kale.
+Bir kelime ya da kalıp, 3 farklı günde doğru hatırlanınca (5. basamak) "güçlü" sayılır.
+Kale, adadaki 18 öğenin hepsi güçlü olunca ve hikâye okununca açılır: rol yapma sahnesi + final sınavı
+(Beginner %70, diğerleri %85). Sınav geçilince sıradaki ada açılır; kalınırsa ertesi gün tekrar denenir.
 
 ## Bulut (Firebase)
 

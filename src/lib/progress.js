@@ -6,6 +6,7 @@
 // - own words carry `at`; deletions are remembered in `removed` with their time
 // - XP is kept per device, because each device only ever adds to its own counter
 // - settings (name, level, islands...) carry one `settingsAt`; the newer set wins
+// - island records (story read, exam passed...) only move forward, so the later time wins
 
 export const SETTINGS = ['name', 'avatar', 'color', 'level', 'topics', 'dailyGoal', 'micOn']
 
@@ -32,6 +33,8 @@ export function newProgress({ id, name, avatar, color, level, topics }, now = Da
     custom: [],
     removed: {},
     xpLog: {},
+    islands: {},
+    openIslands: {},
     createdAt: now,
   }
 }
@@ -133,8 +136,26 @@ export function mergeProgress(a, b) {
     xpLog[device] = { total: Math.max(mine.total, log.total), days }
   }
 
+  const islands = { ...a.islands }
+  for (const [key, rec] of Object.entries(b.islands ?? {})) {
+    const mine = islands[key] ?? {}
+    const out = { ...mine }
+    for (const [field, value] of Object.entries(rec)) {
+      out[field] = mine[field] == null || value > mine[field] ? value : mine[field]
+    }
+    islands[key] = out
+  }
+
+  // Explorers from before island conquest keep the islands they had already opened.
+  let openIslands = a.openIslands ?? b.openIslands
+  if (a.openIslands && b.openIslands) {
+    openIslands = { ...a.openIslands }
+    for (const [level, n] of Object.entries(b.openIslands)) openIslands[level] = Math.max(openIslands[level] ?? 0, n)
+  }
+
   const merged = {
     ...a,
+    islands,
     cards,
     custom: [...custom.values()],
     removed,
@@ -143,5 +164,8 @@ export function mergeProgress(a, b) {
     createdAt: Math.min(a.createdAt ?? Infinity, b.createdAt ?? Infinity),
   }
   for (const k of SETTINGS) merged[k] = settingsFrom[k]
+  // Firestore refuses undefined values, so leave the field out until it is known.
+  if (openIslands) merged.openIslands = openIslands
+  else delete merged.openIslands
   return merged
 }
