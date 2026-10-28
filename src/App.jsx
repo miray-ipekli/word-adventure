@@ -1,24 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   loadCache,
-  loadLegacy,
   loadPrefs,
   loadPublicCache,
   loadSession,
-  removeLegacy,
   saveCache,
   savePrefs,
   savePublicCache,
   saveSession,
 } from './lib/storage.js'
-import { awardXp, fromLegacy, mergeProgress, newProgress } from './lib/progress.js'
+import { awardXp, mergeProgress, newProgress } from './lib/progress.js'
 import { changePin, createProfile, deleteProfile, keyFor, newProfileId, saveProgress, unlock, watchProfiles } from './lib/cloud.js'
 import { applyAnswer, buildSession, discoverCard, focusCard } from './lib/srs.js'
 import { caps } from './lib/speech.js'
 import { setSoundEnabled } from './lib/sound.js'
 import ProfilePicker from './components/ProfilePicker.jsx'
 import Onboarding from './components/Onboarding.jsx'
-import Migrate from './components/Migrate.jsx'
 import MapScreen from './components/MapScreen.jsx'
 import Session from './components/Session.jsx'
 import SpeakStudio from './components/SpeakStudio.jsx'
@@ -43,7 +40,6 @@ export default function App() {
   const [run, setRun] = useState(null)
   const [explorers, setExplorers] = useState(loadPublicCache)
   const [listStatus, setListStatus] = useState('loading')
-  const [legacy, setLegacy] = useState(loadLegacy)
   const [sync, setSync] = useState('saved')
   const [creating, setCreating] = useState({ busy: false, error: '' })
 
@@ -190,13 +186,6 @@ export default function App() {
     }
   }
 
-  const moveLegacy = async (old, pin) => {
-    const p = fromLegacy(old, prefs.deviceId)
-    await createProfile(p, pin)
-    removeLegacy(old.id)
-    setLegacy(loadLegacy())
-  }
-
   const startRun = (opts) => {
     setRun({ ...opts, steps: buildSession(profile, { ...opts, caps }), key: Date.now() })
     setScreen('session')
@@ -227,17 +216,11 @@ export default function App() {
     )
   }
 
-  if (screen === 'migrate') {
-    return <Migrate profiles={legacy} onMove={moveLegacy} onExit={() => setScreen('profiles')} />
-  }
-
   if (!profile || screen === 'profiles') {
     return (
       <ProfilePicker
         profiles={explorers}
         status={listStatus}
-        legacyCount={legacy.length}
-        onMigrate={() => setScreen('migrate')}
         onUnlock={signIn}
         onNew={() => {
           setCreating({ busy: false, error: '' })

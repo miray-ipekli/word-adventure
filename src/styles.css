@@ -2113,26 +2113,6 @@ p {
   text-align: center;
 }
 
-.migrate-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.migrate-row {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  border: 2px solid var(--ink);
-  border-radius: 14px;
-  background: var(--paper-2);
-}
-
 .sync {
   font-size: 0.78rem;
   font-weight: 800;

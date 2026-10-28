@@ -4,8 +4,6 @@ const PREFS = 'word-adventure.prefs'
 const SESSION = 'word-adventure.session'
 const CACHE = 'word-adventure.cache.'
 const PUBLIC = 'word-adventure.public'
-// Saved by the first version of the game, before explorers moved to the cloud.
-const LEGACY = 'word-adventure.v1'
 
 function read(key, fallback) {
   try {
@@ -26,7 +24,7 @@ function write(key, value) {
 }
 
 export function loadPrefs() {
-  const prefs = read(PREFS, null) ?? { sound: read(LEGACY, {}).sound ?? true }
+  const prefs = read(PREFS, null) ?? { sound: true }
   if (!prefs.deviceId) {
     prefs.deviceId = Math.random().toString(36).slice(2, 12)
     write(PREFS, prefs)
@@ -46,17 +44,6 @@ export const saveCache = (id, entry) => write(CACHE + id, entry)
 
 export const loadPublicCache = () => read(PUBLIC, [])
 export const savePublicCache = (list) => write(PUBLIC, list)
-
-export function loadLegacy() {
-  return read(LEGACY, { profiles: [] }).profiles ?? []
-}
-
-export function removeLegacy(id) {
-  const store = read(LEGACY, null)
-  if (!store) return
-  const profiles = store.profiles.filter((p) => p.id !== id)
-  write(LEGACY, profiles.length ? { ...store, profiles, activeId: null } : null)
-}
 
 export const AVATARS = ['🦊', '🐼', '🐯', '🐸', '🦉', '🐙', '🦄', '🐧', '🐨', '🦁', '🐳', '🐝']
 export const AVATAR_COLORS = ['#FF9F68', '#4FA3F7', '#2EC4A6', '#FF7EB6', '#8E7CF0', '#F7B32B']

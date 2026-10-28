@@ -36,31 +36,6 @@ export function newProgress({ id, name, avatar, color, level, topics }, now = Da
   }
 }
 
-// Turns a profile saved by the first, device-only version of the game into the new shape.
-export function fromLegacy(old, deviceId, now = Date.now()) {
-  const days = {}
-  if (old.streak?.last && old.streak.count > 0) {
-    const last = new Date(old.streak.last)
-    for (let i = 0; i < old.streak.count; i++) {
-      const d = new Date(last)
-      d.setDate(last.getDate() - i)
-      days[todayKey(d)] = 0
-    }
-  }
-  if (old.today?.date) days[old.today.date] = (days[old.today.date] ?? 0) + (old.today.xp ?? 0)
-  const cards = {}
-  for (const [id, c] of Object.entries(old.cards ?? {})) cards[id] = { ...c, at: c.at ?? now }
-  return {
-    ...newProgress(old, old.createdAt ?? now),
-    dailyGoal: old.dailyGoal ?? 50,
-    micOn: old.micOn !== false,
-    settingsAt: now,
-    cards,
-    custom: (old.custom ?? []).map((w) => ({ ...w, at: w.at ?? now })),
-    xpLog: { [deviceId]: { total: old.xp ?? 0, days } },
-  }
-}
-
 export function totalXp(p) {
   return Object.values(p.xpLog ?? {}).reduce((sum, d) => sum + (d.total ?? 0), 0)
 }

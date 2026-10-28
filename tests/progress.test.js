@@ -55,21 +55,6 @@ test('a deleted own word stays deleted until it is added again', () => {
   assert.equal(P.mergeProgress(m, readded).custom.length, 1)
 })
 
-test('an explorer from the device-only version keeps words, XP and streak', () => {
-  const legacy = {
-    id: 'old1', name: 'Defne', avatar: 'y', color: '#111', level: 'beginner', topics: ['animals'], xp: 120, dailyGoal: 30,
-    today: { date: '2026-10-28', xp: 40 }, streak: { count: 3, last: '2026-10-28' }, cards: { w: { box: 3, due: 0 } }, custom: [], createdAt: 7,
-  }
-  const p = P.fromLegacy(legacy, 'phone', 999)
-  assert.equal(p.id, 'old1')
-  assert.equal(P.totalXp(p), 120)
-  assert.equal(P.liveStreak(p, '2026-10-28'), 3)
-  assert.equal(P.todayXp(p, '2026-10-28'), 40)
-  assert.equal(p.cards.w.box, 3)
-  assert.equal(p.cards.w.at, 999)
-  assert.equal(p.dailyGoal, 30)
-})
-
 test('the public card has exactly the fields the database rules allow', () => {
   const pub = P.publicFields(base, 1234)
   assert.deepEqual(Object.keys(pub).sort(), ['avatar', 'color', 'createdAt', 'hidden', 'level', 'name', 'rank', 'streak', 'updatedAt'])

@@ -8,7 +8,7 @@ import PinPad from './PinPad.jsx'
 const MAX_TRIES = 5
 const COOL_DOWN = 30
 
-export default function ProfilePicker({ profiles, status, legacyCount, onMigrate, onUnlock, onNew }) {
+export default function ProfilePicker({ profiles, status, onUnlock, onNew }) {
   const [picked, setPicked] = useState(null)
 
   return (
@@ -21,20 +21,6 @@ export default function ProfilePicker({ profiles, status, legacyCount, onMigrate
         <p className="lead">
           {profiles.length ? "Who's exploring today?" : 'Sail between islands, collect words and learn to speak English with confidence.'}
         </p>
-
-        {legacyCount > 0 && (
-          <div className="notice sticker">
-            <span>
-              <strong>
-                {legacyCount} explorer{legacyCount > 1 ? 's' : ''} saved only on this device.
-              </strong>{' '}
-              Move {legacyCount > 1 ? 'them' : 'it'} to the cloud to play on any device.
-            </span>
-            <button type="button" className="btn btn-primary btn-small" onClick={onMigrate}>
-              Move to cloud
-            </button>
-          </div>
-        )}
 
         {status === 'loading' && !profiles.length && <p className="lead">Loading explorers…</p>}
         {status === 'offline' && (
