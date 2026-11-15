@@ -2748,6 +2748,16 @@ p {
     height: 50px;
   }
 
+  /* All eight avatar backgrounds fit on one row. */
+  .color-row {
+    gap: 6px;
+  }
+
+  .color-dot {
+    width: 31px;
+    height: 31px;
+  }
+
   .build-slot {
     width: 36px;
   }

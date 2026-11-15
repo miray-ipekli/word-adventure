@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { AVATARS, AVATAR_GROUPS, avatarGroupOf, CANARY } from '../src/lib/storage.js'
+import { AVATARS, AVATAR_COLORS, AVATAR_GROUPS, avatarBackground, avatarGroupOf, CANARY, STRIPES } from '../src/lib/storage.js'
 import { isManifestAvatar, manifestMember, MANIFEST_MEMBERS } from '../src/data/manifest.js'
 
 test('every avatar fits the 16 characters the database rules allow, and none repeats', () => {
@@ -40,4 +40,18 @@ test('the drawn canary is an animal avatar that fits the database rules', () => 
   assert.equal(avatarGroupOf(CANARY), 'animals')
   assert.ok(CANARY.length <= 16)
   assert.equal(isManifestAvatar(CANARY), false)
+})
+
+test('avatar backgrounds fit the 9 characters the database allows, stripes included', () => {
+  for (const c of AVATAR_COLORS) assert.ok(c.length <= 9, c)
+  assert.equal(new Set(AVATAR_COLORS).size, AVATAR_COLORS.length)
+  assert.ok(AVATAR_COLORS.includes(STRIPES))
+})
+
+test('the stripes background is yellow and navy; plain colors stay as they are', () => {
+  const bg = avatarBackground(STRIPES)
+  assert.match(bg, /repeating-linear-gradient\(90deg/)
+  assert.match(bg, /#FFED00/)
+  assert.match(bg, /#13235B/)
+  assert.equal(avatarBackground('#FF9F68'), '#FF9F68')
 })

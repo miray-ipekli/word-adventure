@@ -33,12 +33,18 @@ test('texts are translated, filled in, and fall back to English', () => {
   assert.equal(t.plural(4, 'Review {n} word', 'Review {n} words'), 'Review 4 words')
 })
 
-test('beginners start in Turkish, others in English, and old explorers follow their level', () => {
+test('new beginners start in Turkish, others in English', () => {
   assert.equal(defaultLangForLevel('beginner'), 'tr')
   assert.equal(defaultLangForLevel('intermediate'), 'en')
+})
+
+test('an explorer without a language takes the start screen language; a saved one always wins', () => {
+  assert.equal(langOf({ level: 'intermediate' }, 'tr'), 'tr')
+  assert.equal(langOf({ level: 'beginner' }, 'en'), 'en')
+  assert.equal(langOf({ level: 'intermediate', lang: 'en' }, 'tr'), 'en')
+  // with nothing else to go on, the level decides
   assert.equal(langOf({ level: 'beginner' }), 'tr')
   assert.equal(langOf({ level: 'advanced' }), 'en')
-  assert.equal(langOf({ level: 'beginner', lang: 'en' }), 'en')
 })
 
 test('the chosen language is saved with the explorer and survives a merge of two devices', () => {

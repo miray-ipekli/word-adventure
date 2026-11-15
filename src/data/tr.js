@@ -106,6 +106,7 @@ export default {
   Canary: 'Kanarya',
   Color: 'Renk',
   'Color {c}': 'Renk {c}',
+  'Yellow and navy stripes': 'Sarı-lacivert çizgili',
   '{n} islands chosen': '{n} ada seçildi',
   'Ready to sail!': 'Yelken açmaya hazır!',
 

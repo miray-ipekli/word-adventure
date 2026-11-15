@@ -76,4 +76,11 @@ export const AVATARS = AVATAR_GROUPS.flatMap((g) => g.avatars)
 
 // The group an avatar belongs to; anything unknown falls back to the first group.
 export const avatarGroupOf = (avatar) => (AVATAR_GROUPS.find((g) => g.avatars.includes(avatar)) ?? AVATAR_GROUPS[0]).id
-export const AVATAR_COLORS = ['#FF9F68', '#4FA3F7', '#7BD88F', '#FF7EB6', '#8E7CF0', '#F7B32B', '#F25C5C']
+// Avatar backgrounds: plain colors, plus yellow and navy vertical stripes (Fenerbahçe colors),
+// saved as 'stripes' (the database allows up to 9 characters for the color).
+export const STRIPES = 'stripes'
+export const AVATAR_COLORS = ['#FF9F68', '#4FA3F7', '#7BD88F', '#FF7EB6', '#8E7CF0', '#F7B32B', '#F25C5C', STRIPES]
+
+// The CSS background for a saved avatar color.
+export const avatarBackground = (color) =>
+  color === STRIPES ? 'repeating-linear-gradient(90deg, #FFED00 0 16.67%, #13235B 16.67% 33.34%)' : color

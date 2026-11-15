@@ -17,8 +17,9 @@ export const LANGS = [
 // New explorers start in Turkish at Beginner level and in English otherwise.
 export const defaultLangForLevel = (level) => (level === 'beginner' ? 'tr' : 'en')
 
-// The language an explorer sees. Explorers from before this setting follow their level.
-export const langOf = (profile) => profile?.lang ?? defaultLangForLevel(profile?.level)
+// The language an explorer sees. An explorer from before this setting has no `lang` yet: they get
+// `fallback` (the start screen's language on this device), or else the one for their level.
+export const langOf = (profile, fallback) => profile?.lang ?? fallback ?? defaultLangForLevel(profile?.level)
 
 // Language for screens before anyone signs in, on a device that has not chosen one yet.
 export const browserLang = () => (typeof navigator !== 'undefined' && /^tr\b/i.test(navigator.language ?? '') ? 'tr' : 'en')

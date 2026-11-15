@@ -62,9 +62,10 @@ export default function App() {
 
   useEffect(() => savePrefs(prefs), [prefs])
   // The start screen of this device follows the language of the explorer who played last.
-  const profileLang = profile ? langOf(profile) : null
+  // It is kept as `menuLang`: an older `lang` value was written automatically, not chosen, so it is ignored.
+  const profileLang = profile?.lang ?? null
   useEffect(() => {
-    if (profileLang) setPrefs((p) => (p.lang === profileLang ? p : { ...p, lang: profileLang }))
+    if (profileLang) setPrefs((p) => (p.menuLang === profileLang ? p : { ...p, menuLang: profileLang }))
   }, [profileLang])
   useEffect(() => setSoundEnabled(prefs.sound), [prefs.sound])
 
@@ -233,6 +234,12 @@ export default function App() {
     }
   }
 
+  // Explorers from before the language setting take the language of the start screen they signed
+  // in from, once; it is saved with them, so every device shows the same from then on.
+  useEffect(() => {
+    if (profile && !profile.lang) changeSettings({ lang: prefs.menuLang ?? browserLang() })
+  }, [profile?.id, profile?.lang])
+
   // Explorers who played before island conquest keep the islands they had already opened.
   useEffect(() => {
     if (profile && !profile.openIslands) updateProfile((p) => (p.openIslands ? p : { ...p, openIslands: { [p.level]: legacyOpenCount(p) } }))
@@ -276,10 +283,10 @@ export default function App() {
   }
 
   // ---- Interface language: the explorer's own while playing, this device's before signing in ----
-  const deviceLang = prefs.lang ?? browserLang()
+  const deviceLang = prefs.menuLang ?? browserLang()
   const signedIn = profile && screen !== 'profiles' && screen !== 'onboarding'
-  const uiLang = signedIn ? langOf(profile) : deviceLang
-  const setDeviceLang = (lang) => setPrefs((p) => ({ ...p, lang }))
+  const uiLang = signedIn ? langOf(profile, deviceLang) : deviceLang
+  const setDeviceLang = (lang) => setPrefs((p) => ({ ...p, menuLang: lang }))
 
   return <LangRoot lang={uiLang}>{view()}</LangRoot>
 

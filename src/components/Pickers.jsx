@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { LEVELS, TOPICS, PICK_COUNT } from '../data/topics.js'
-import { AVATAR_COLORS, AVATAR_GROUPS, avatarGroupOf, CANARY } from '../lib/storage.js'
+import { AVATAR_COLORS, AVATAR_GROUPS, avatarBackground, avatarGroupOf, CANARY, STRIPES } from '../lib/storage.js'
 import { isManifestAvatar, manifestMember } from '../data/manifest.js'
 import { play } from '../lib/sound.js'
 import { LANGS, useT } from '../lib/i18n.js'
@@ -18,7 +18,7 @@ export function Avatar({ avatar, color, size = 56 }) {
   return (
     <span
       className={`avatar ${isManifestAvatar(avatar) ? 'is-photo' : ''}`}
-      style={{ '--avatar-bg': color, width: size, height: size, fontSize: size * 0.55 }}
+      style={{ '--avatar-bg': avatarBackground(color), width: size, height: size, fontSize: size * 0.55 }}
     >
       <AvatarArt avatar={avatar} />
     </span>
@@ -85,7 +85,7 @@ export function AvatarPicker({ avatar, color, onChange }) {
                 aria-checked={a === avatar}
                 aria-label={m ? t('{name} from Manifest', { name: m.name }) : a === CANARY ? t('Canary') : undefined}
                 className={`avatar-option ${m ? 'is-photo' : ''} ${a === avatar ? 'is-on' : ''}`}
-                style={{ '--avatar-bg': color }}
+                style={{ '--avatar-bg': avatarBackground(color) }}
                 onClick={() => {
                   play('tap')
                   onChange({ avatar: a, color })
@@ -104,9 +104,10 @@ export function AvatarPicker({ avatar, color, onChange }) {
             type="button"
             role="radio"
             aria-checked={c === color}
-            aria-label={t('Color {c}', { c })}
+            aria-label={c === STRIPES ? t('Yellow and navy stripes') : t('Color {c}', { c })}
+            title={c === STRIPES ? t('Yellow and navy stripes') : undefined}
             className={`color-dot ${c === color ? 'is-on' : ''}`}
-            style={{ background: c }}
+            style={{ background: avatarBackground(c) }}
             onClick={() => onChange({ avatar, color: c })}
           />
         ))}
