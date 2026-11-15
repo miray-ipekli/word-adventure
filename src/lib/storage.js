@@ -44,6 +44,23 @@ export const saveSession = (session) => write(SESSION, session)
 export const loadCache = (id) => read(CACHE + id, null)
 export const saveCache = (id, entry) => write(CACHE + id, entry)
 
+// Explorers created on this device that have not reached the cloud yet (created while offline).
+// They are listed on the start screen of this device so they can still be opened.
+export function loadUnsyncedExplorers() {
+  const out = []
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i)
+      if (!k?.startsWith(CACHE)) continue
+      const entry = read(k, null)
+      if (entry?.isNew && entry.data) out.push(entry.data)
+    }
+  } catch {
+    // Storage blocked: nothing to list.
+  }
+  return out
+}
+
 export const loadPublicCache = () => read(PUBLIC, [])
 export const savePublicCache = (list) => write(PUBLIC, list)
 

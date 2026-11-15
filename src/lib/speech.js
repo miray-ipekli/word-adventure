@@ -3,10 +3,13 @@
 import { editDistance, norm } from './srs.js'
 
 const Recognition = typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition)
+// Brave has the SpeechRecognition object but no speech service behind it, so every attempt fails
+// with a "network" error. Treat it like a browser that cannot listen.
+const isBrave = typeof navigator !== 'undefined' && !!navigator.brave
 
 export const caps = {
   tts: typeof window !== 'undefined' && 'speechSynthesis' in window,
-  mic: !!Recognition,
+  mic: !!Recognition && !isBrave,
 }
 
 let voice = null

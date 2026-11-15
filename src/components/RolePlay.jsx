@@ -11,7 +11,9 @@ const MAX_TRIES = 3
 // Without a microphone, your lines are built from word tiles instead.
 export default function RolePlay({ profile, topicId, actions, onDone, onExit }) {
   const { roleplay } = islandContent(topicId, profile.level)
-  const voice = caps.mic && profile.micOn !== false
+  // Switches the rest of the scene to word tiles when speaking is not possible right now.
+  const [tiles, setTiles] = useState(false)
+  const voice = caps.mic && profile.micOn !== false && !tiles
   const [at, setAt] = useState(0)
   const [state, setState] = useState('idle') // idle | listening | result
   const [result, setResult] = useState(null)
@@ -70,6 +72,8 @@ export default function RolePlay({ profile, topicId, actions, onDone, onExit }) 
     } catch (e) {
       setState('idle')
       setError(MIC_ERRORS[e.message] ?? 'Something went wrong with the microphone.')
+      // Blocked, missing or unsupported microphone: finish the scene with word tiles instead.
+      if (e.message !== 'no-speech') setTiles(true)
     }
   }
 
@@ -132,8 +136,12 @@ export default function RolePlay({ profile, topicId, actions, onDone, onExit }) 
                       <button type="button" className="btn btn-ghost" onClick={moveOn}>
                         Continue anyway
                       </button>
-                    ) : (
+                    ) : state === 'result' && result.score >= PASS ? (
                       <span />
+                    ) : (
+                      <button type="button" className="btn btn-ghost btn-small" onClick={() => setTiles(true)} disabled={state === 'listening'}>
+                        I can't speak right now, let me build it
+                      </button>
                     )}
                     {state === 'result' && result.score >= PASS && (
                       <button type="button" className="btn btn-primary" onClick={moveOn} autoFocus>
@@ -144,6 +152,7 @@ export default function RolePlay({ profile, topicId, actions, onDone, onExit }) 
                 </>
               ) : (
                 <>
+                  {error && <p className="error-note">{error} Build your line with the word tiles instead.</p>}
                   <p className="muted">{line[2]}</p>
                   <SentenceBuilder key={at} sentence={line[1]} locked={built !== null} onResult={(ok) => (play(ok ? 'correct' : 'wrong'), setBuilt(ok))} />
                   {built !== null && (

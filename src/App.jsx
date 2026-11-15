@@ -4,13 +4,15 @@ import {
   loadPrefs,
   loadPublicCache,
   loadSession,
+  loadUnsyncedExplorers,
   saveCache,
   savePrefs,
   savePublicCache,
   saveSession,
 } from './lib/storage.js'
-import { awardXp, mergeProgress, newProgress, todayKey } from './lib/progress.js'
-import { changePin, createProfile, deleteProfile, keyFor, newProfileId, saveProgress, unlock, watchProfiles } from './lib/cloud.js'
+import { awardXp, mergeProgress, newProgress, publicFields, todayKey } from './lib/progress.js'
+import { changePin, deleteProfile, keyFor, newProfileId, saveProgress, unlock, watchProfiles } from './lib/cloud.js'
+import { withTimeout } from './lib/timeout.js'
 import { applyAnswer, buildSession, discoverCard, focusCard, isStarred } from './lib/srs.js'
 import { buildExam, islandKey, islandSessionOptions, legacyOpenCount } from './lib/islands.js'
 import { caps } from './lib/speech.js'
@@ -28,11 +30,19 @@ import Settings from './components/Settings.jsx'
 
 const SAVE_DELAY = 1500
 const OFFLINE_MSG = "Couldn't reach the cloud. Check your internet connection and try again."
+// A device that played this explorer before waits this long for the cloud's PIN check, then opens
+// its own saved copy (the PIN still has to match that copy).
+const KNOWN_DEVICE_WAIT = 4000
+// Signing out waits at most this long for the last save; anything unsaved stays on this device
+// and uploads the next time this explorer signs in here.
+const SIGN_OUT_WAIT = 8000
 
 function startState() {
   const session = loadSession()
   const cached = session ? loadCache(session.id) : null
-  return session && cached?.key === session.key ? { session, profile: cached.data } : { session: null, profile: null }
+  return session && cached?.key === session.key
+    ? { session, profile: cached.data, isNew: !!cached.isNew }
+    : { session: null, profile: null, isNew: false }
 }
 
 export default function App() {
@@ -76,6 +86,8 @@ export default function App() {
   const changes = useRef(0)
   const timer = useRef(null)
   const inflight = useRef(null)
+  // True until a newly created explorer has reached the cloud for the first time.
+  const fresh = useRef(start.isNew)
 
   // Returns a promise that settles when the cloud copy is up to date (or the save failed).
   const flush = useCallback(() => {
@@ -85,15 +97,24 @@ export default function App() {
     if (!p || !key) return Promise.resolve()
     const sent = changes.current
     setSync('saving')
-    inflight.current = saveProgress(key, p)
+    inflight.current = saveProgress(key, p, { allowCreate: fresh.current })
       .then(
         (merged) => {
+          fresh.current = false
           // Keep anything played while the save was on its way.
           setProfile((cur) => (cur && cur.id === merged.id ? mergeProgress(cur, merged) : cur))
           if (changes.current === sent) changes.current = 0
           setSync(changes.current ? 'saving' : 'saved')
         },
-        () => setSync('offline'),
+        (e) => {
+          if (e?.code === 'gone') {
+            // The PIN was changed or the explorer deleted elsewhere: stop retrying.
+            changes.current = 0
+            setSync('gone')
+          } else {
+            setSync('offline')
+          }
+        },
       )
       .finally(() => {
         inflight.current = null
@@ -104,7 +125,7 @@ export default function App() {
 
   // Finishes any save on its way, then stops syncing the current explorer.
   const stopSync = async () => {
-    await flush()
+    await withTimeout(flush(), SIGN_OUT_WAIT).catch(() => {})
     clearTimeout(timer.current)
     changes.current = 0
     stopped.current = true
@@ -112,8 +133,9 @@ export default function App() {
   }
 
   useEffect(() => {
-    if (profile && session) saveCache(profile.id, { key: session.key, data: profile, pending: changes.current > 0 })
-  }, [profile, session])
+    if (profile && session)
+      saveCache(profile.id, { key: session.key, data: profile, pending: changes.current > 0, isNew: fresh.current })
+  }, [profile, session, sync])
 
   useEffect(() => {
     // Sync when the game opens, is hidden or shown again, or comes back online. Each sync
@@ -140,12 +162,15 @@ export default function App() {
   const changeSettings = (changes) => updateProfile((p) => ({ ...p, ...changes, settingsAt: Date.now() }))
 
   // ---- Signing in and out ----
-  const open = (id, key, data) => {
+  // pending: there are changes the cloud has not seen yet. isNew: the explorer is not in the cloud yet.
+  const open = (id, key, data, { pending = false, isNew = false } = {}) => {
     const s = { id, key }
     saveSession(s)
-    saveCache(id, { key, data, pending: false })
+    saveCache(id, { key, data, pending, isNew })
     stopped.current = false
     latest.current = { profile: data, key }
+    fresh.current = isNew
+    changes.current = pending ? 1 : 0
     setSession(s)
     setProfile(data)
     setScreen('map')
@@ -155,19 +180,27 @@ export default function App() {
   const signIn = async (id, pin) => {
     const key = await keyFor(id, pin)
     const cached = loadCache(id)
+    const known = cached?.key === key
     let remote
     try {
-      remote = await unlock(id, key)
+      remote = await (known ? withTimeout(unlock(id, key), KNOWN_DEVICE_WAIT) : unlock(id, key))
     } catch {
-      // Offline: a device that played this explorer before can still check the PIN itself.
-      if (cached?.key === key) {
-        open(id, key, cached.data)
+      // Offline or slow: a device that played this explorer before can check the PIN itself.
+      if (known) {
+        open(id, key, cached.data, { pending: !!cached.pending, isNew: !!cached.isNew })
         return 'ok'
       }
       return 'offline'
     }
-    if (!remote) return 'wrong'
-    open(id, key, cached?.key === key ? mergeProgress(cached.data, remote) : remote)
+    if (!remote) {
+      // Created on this device while offline and not uploaded yet: the saved copy is the only one.
+      if (known && cached.isNew) {
+        open(id, key, cached.data, { pending: true, isNew: true })
+        return 'ok'
+      }
+      return 'wrong'
+    }
+    open(id, key, known ? mergeProgress(cached.data, remote) : remote, { pending: known && !!cached.pending })
     return 'ok'
   }
 
@@ -184,9 +217,11 @@ export default function App() {
     setCreating({ busy: true, error: '' })
     try {
       const p = newProgress({ id: newProfileId(), ...form })
-      const key = await createProfile(p, pin)
+      const key = await keyFor(p.id, pin)
       setCreating({ busy: false, error: '' })
-      open(p.id, key, p)
+      // The explorer starts playing on this device right away. The first sync puts them in the
+      // cloud; until then the map shows "Saving…" or "Offline · will sync".
+      open(p.id, key, p, { pending: true, isNew: true })
     } catch {
       setCreating({ busy: false, error: OFFLINE_MSG })
     }
@@ -248,9 +283,12 @@ export default function App() {
   }
 
   if (!profile || screen === 'profiles') {
+    const unsynced = loadUnsyncedExplorers()
+      .filter((p) => !explorers.some((e) => e.id === p.id))
+      .map((p) => ({ id: p.id, ...publicFields(p) }))
     return (
       <ProfilePicker
-        profiles={explorers}
+        profiles={[...explorers, ...unsynced]}
         status={listStatus}
         onUnlock={signIn}
         onNew={() => {
@@ -343,7 +381,7 @@ export default function App() {
             setScreen('map')
           }}
           onChangePin={async (pin) => {
-            await flush()
+            await withTimeout(flush(), SIGN_OUT_WAIT).catch(() => {})
             const key = await changePin(latest.current.profile, session.key, pin)
             const s = { id: profile.id, key }
             saveSession(s)

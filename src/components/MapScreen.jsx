@@ -19,7 +19,7 @@ function GoalRing({ value, goal }) {
   )
 }
 
-const SYNC_LABEL = { saved: 'Saved', saving: 'Saving…', offline: 'Offline · will sync' }
+const SYNC_LABEL = { saved: 'Saved', saving: 'Saving…', offline: 'Offline · will sync', gone: 'Not saved · sign in again' }
 
 function Hud({ profile, sound, sync, onSwitch, onSettings }) {
   const rank = rankInfo(totalXp(profile))

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { play } from '../lib/sound.js'
 
 export const PIN_LENGTH = 4
@@ -6,7 +6,13 @@ const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫']
 
 // A big, phone-style keypad. Calls onComplete once four digits are entered.
 export default function PinPad({ error, busy, onComplete }) {
-  const [pin, setPin] = useState('')
+  const [pin, setPinState] = useState('')
+  // The digits typed so far, kept in a ref too so quick taps never build on an outdated value.
+  const typed = useRef('')
+  const setPin = (value) => {
+    typed.current = value
+    setPinState(value)
+  }
 
   useEffect(() => {
     if (error) setPin('')
@@ -14,10 +20,10 @@ export default function PinPad({ error, busy, onComplete }) {
 
   const press = (k) => {
     if (busy) return
-    if (k === '⌫') return setPin((p) => p.slice(0, -1))
-    if (!/\d/.test(k) || pin.length >= PIN_LENGTH) return
+    if (k === '⌫') return setPin(typed.current.slice(0, -1))
+    if (!/\d/.test(k) || typed.current.length >= PIN_LENGTH) return
     play('tap')
-    const next = pin + k
+    const next = typed.current + k
     setPin(next)
     if (next.length === PIN_LENGTH) {
       onComplete(next)

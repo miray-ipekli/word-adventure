@@ -2278,7 +2278,8 @@ p {
   background: var(--paper-2);
 }
 
-.sync-offline {
+.sync-offline,
+.sync-gone {
   background: var(--bad-bg);
 }
 
