@@ -5,6 +5,7 @@ import { passMark } from '../lib/islands.js'
 import { play } from '../lib/sound.js'
 import { Discover, Example, Question, SpeakerButton, StarButton } from './Questions.jsx'
 import Confetti from './Confetti.jsx'
+import { useT } from '../lib/i18n.js'
 
 const PRAISE = ['Great!', 'Nice one!', 'Excellent!', 'You got it!', 'Brilliant!', 'Perfect!']
 const MAX_RETRIES = 2
@@ -27,7 +28,8 @@ export default function Session({ profile, steps: initialSteps, mode, topicId, a
   const word = step ? index.get(step.wordId) : null
   const finished = at >= steps.length
   const exam = mode === 'exam'
-  const title = { island: topicById(topicId)?.name, exam: 'Castle exam', tricky: 'Tricky words', starred: 'Starred words' }[mode] ?? 'Daily review'
+  const t = useT()
+  const title = t({ island: topicById(topicId)?.name, exam: 'Castle exam', tricky: 'Tricky words', starred: 'Starred words' }[mode] ?? 'Daily review')
   const score = tally.right + tally.wrong ? tally.right / (tally.right + tally.wrong) : 0
   const passed = exam && score >= passMark(profile.level)
 
@@ -86,7 +88,7 @@ export default function Session({ profile, steps: initialSteps, mode, topicId, a
     setFeedback({
       correct,
       note,
-      title: correct ? PRAISE[Math.floor(Math.random() * PRAISE.length)] : 'Not quite',
+      title: t(correct ? PRAISE[Math.floor(Math.random() * PRAISE.length)] : 'Not quite'),
     })
   }
 
@@ -99,10 +101,10 @@ export default function Session({ profile, steps: initialSteps, mode, topicId, a
           <div className="big-icon" aria-hidden="true">
             🏝️
           </div>
-          <h2 className="title-lg">Nothing to do here right now</h2>
-          <p className="muted">Your words are resting. Come back when reviews are due, or practice speaking in the meantime.</p>
+          <h2 className="title-lg">{t('Nothing to do here right now')}</h2>
+          <p className="muted">{t('Your words are resting. Come back when reviews are due, or practice speaking in the meantime.')}</p>
           <button type="button" className="btn btn-primary" onClick={onExit}>
-            Back to the map
+            {t('Back to the map')}
           </button>
         </div>
       </div>
@@ -123,13 +125,20 @@ export default function Session({ profile, steps: initialSteps, mode, topicId, a
             {exam ? (passed ? '🏰' : '🛡️') : '🏆'}
           </div>
           <h2 className="title-lg">
-            {!exam ? 'Adventure complete!' : passed ? `${topicById(topicId)?.name} is conquered!` : 'The castle held this time'}
+            {!exam
+              ? t('Adventure complete!')
+              : passed
+                ? t('{name} is conquered!', { name: t(topicById(topicId)?.name ?? '') })
+                : t('The castle held this time')}
           </h2>
           {exam && (
             <p className={passed ? 'success-note' : 'muted'}>
               {passed
-                ? 'Your flag is on the island and the next island is open. You can always come back here.'
-                : `You need ${Math.round(passMark(profile.level) * 100)}% to win. The words you missed are now tricky words. Practice them and try the castle again tomorrow.`}
+                ? t('Your flag is on the island and the next island is open. You can always come back here.')
+                : t(
+                    'You need {pct}% to win. The words you missed are now tricky words. Practice them and try the castle again tomorrow.',
+                    { pct: Math.round(passMark(profile.level) * 100) },
+                  )}
             </p>
           )}
           <div className="stat-row">
@@ -139,17 +148,17 @@ export default function Session({ profile, steps: initialSteps, mode, topicId, a
             </div>
             <div className="stat stat-mastered">
               <strong className="tabular">{accuracy}%</strong>
-              <span>Accuracy</span>
+              <span>{t('Accuracy')}</span>
             </div>
             <div className="stat stat-learning">
               <strong className="tabular">{Object.keys(tally.words).length}</strong>
-              <span>Words</span>
+              <span>{t('Words')}</span>
             </div>
           </div>
           {missed.length > 0 && (
             <div className="missed">
               <p>
-                <strong>These words will come back soon:</strong>
+                <strong>{t('These words will come back soon:')}</strong>
               </p>
               <ul className="word-chips">
                 {missed.map((w) => (
@@ -161,7 +170,7 @@ export default function Session({ profile, steps: initialSteps, mode, topicId, a
             </div>
           )}
           <button type="button" className="btn btn-primary" onClick={onExit} autoFocus>
-            {exam || mode === 'island' ? 'Back to the island' : 'Back to the map'}
+            {exam || mode === 'island' ? t('Back to the island') : t('Back to the map')}
           </button>
         </div>
       </div>
@@ -179,22 +188,26 @@ export default function Session({ profile, steps: initialSteps, mode, topicId, a
   return (
     <div className="screen session-screen">
       <header className="session-top">
-        <button type="button" className="icon-btn" onClick={leave} aria-label="Leave the adventure">
+        <button type="button" className="icon-btn" onClick={leave} aria-label={t('Leave the adventure')}>
           ✕
         </button>
-        <div className="session-progress" aria-label={`Step ${at + 1} of ${steps.length}`}>
+        <div className="session-progress" aria-label={t('Step {n} of {total}', { n: at + 1, total: steps.length })}>
           <span style={{ width: `${progress}%` }} />
         </div>
         <span className={`combo ${combo >= 3 ? 'is-hot' : ''}`} aria-live="polite">
-          {combo >= 2 ? `${combo}× combo` : title}
+          {combo >= 2 ? t('{n}× combo', { n: combo }) : title}
         </span>
       </header>
 
       <main className="session-stage">
         <div className="panel sticker q-panel" key={`${at}-${step.type}`}>
-          {step.retry && <span className="retry-tag">Second chance</span>}
-          {step.practice && <span className="retry-tag">{step.starred ? '★ Starred · practice' : 'Practice'}</span>}
-          {step.exam && <span className="retry-tag">Castle exam · {at + 1}/{steps.length}</span>}
+          {step.retry && <span className="retry-tag">{t('Second chance')}</span>}
+          {step.practice && <span className="retry-tag">{step.starred ? t('★ Starred · practice') : t('Practice')}</span>}
+          {step.exam && (
+            <span className="retry-tag">
+              {t('Castle exam')} · {at + 1}/{steps.length}
+            </span>
+          )}
           {step.kind === 'discover' ? (
             <Discover word={word} starred={isStarred(profile, word.id)} onStar={actions.star} onDone={onDiscover} />
           ) : (
@@ -223,7 +236,7 @@ export default function Session({ profile, steps: initialSteps, mode, topicId, a
               <Example word={word} />
             </div>
             <button type="button" className="btn btn-light" onClick={next} autoFocus>
-              Continue
+              {t('Continue')}
             </button>
           </div>
         </div>

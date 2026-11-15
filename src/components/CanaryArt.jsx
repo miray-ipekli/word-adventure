@@ -1,17 +1,19 @@
 import { useId } from 'react'
+import { useT } from '../lib/i18n.js'
 
 // A yellow canary perched on a branch, side view, in a navy-and-yellow striped scarf.
 // Drawn to sit among the animal emojis.
 const NAVY = '#13235B'
 
 export default function CanaryArt() {
+  const t = useT()
   // useId can contain characters like ":" that break url(#...) references, so keep only safe ones.
   const id = useId().replace(/[^a-zA-Z0-9_-]/g, '')
   const body = `canary-body-${id}`
   const wing = `canary-wing-${id}`
   const wood = `canary-wood-${id}`
   return (
-    <svg className="drawn-avatar" viewBox="0 0 64 64" role="img" aria-label="Canary">
+    <svg className="drawn-avatar" viewBox="0 0 64 64" role="img" aria-label={t('Canary')}>
       <defs>
         <radialGradient id={body} cx="0.3" cy="0.25" r="0.85">
           <stop offset="0" stopColor="#FFF27A" />

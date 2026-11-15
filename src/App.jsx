@@ -13,6 +13,7 @@ import {
 import { awardXp, mergeProgress, newProgress, publicFields, todayKey } from './lib/progress.js'
 import { changePin, deleteProfile, keyFor, newProfileId, saveProgress, unlock, watchProfiles } from './lib/cloud.js'
 import { withTimeout } from './lib/timeout.js'
+import { browserLang, LangRoot, langOf } from './lib/i18n.js'
 import { applyAnswer, buildSession, discoverCard, focusCard, isStarred } from './lib/srs.js'
 import { buildExam, islandKey, islandSessionOptions, legacyOpenCount } from './lib/islands.js'
 import { caps } from './lib/speech.js'
@@ -60,6 +61,11 @@ export default function App() {
   const [creating, setCreating] = useState({ busy: false, error: '' })
 
   useEffect(() => savePrefs(prefs), [prefs])
+  // The start screen of this device follows the language of the explorer who played last.
+  const profileLang = profile ? langOf(profile) : null
+  useEffect(() => {
+    if (profileLang) setPrefs((p) => (p.lang === profileLang ? p : { ...p, lang: profileLang }))
+  }, [profileLang])
   useEffect(() => setSoundEnabled(prefs.sound), [prefs.sound])
 
   // ---- The shared explorer list ----
@@ -269,11 +275,21 @@ export default function App() {
     setScreen('island')
   }
 
+  // ---- Interface language: the explorer's own while playing, this device's before signing in ----
+  const deviceLang = prefs.lang ?? browserLang()
+  const signedIn = profile && screen !== 'profiles' && screen !== 'onboarding'
+  const uiLang = signedIn ? langOf(profile) : deviceLang
+  const setDeviceLang = (lang) => setPrefs((p) => ({ ...p, lang }))
+
+  return <LangRoot lang={uiLang}>{view()}</LangRoot>
+
+  function view() {
   // ---- Screens without a signed-in explorer ----
   if (screen === 'onboarding') {
     return (
       <Onboarding
         canCancel
+        lang={deviceLang}
         busy={creating.busy}
         error={creating.error}
         onCancel={() => setScreen('profiles')}
@@ -290,6 +306,8 @@ export default function App() {
       <ProfilePicker
         profiles={[...explorers, ...unsynced]}
         status={listStatus}
+        lang={deviceLang}
+        onLang={setDeviceLang}
         onUnlock={signIn}
         onNew={() => {
           setCreating({ busy: false, error: '' })
@@ -427,5 +445,6 @@ export default function App() {
           onSwitch={signOut}
         />
       )
+  }
   }
 }

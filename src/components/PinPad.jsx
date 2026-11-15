@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { play } from '../lib/sound.js'
+import { useT } from '../lib/i18n.js'
 
 export const PIN_LENGTH = 4
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫']
 
 // A big, phone-style keypad. Calls onComplete once four digits are entered.
 export default function PinPad({ error, busy, onComplete }) {
+  const t = useT()
   const [pin, setPinState] = useState('')
   // The digits typed so far, kept in a ref too so quick taps never build on an outdated value.
   const typed = useRef('')
@@ -42,18 +44,18 @@ export default function PinPad({ error, busy, onComplete }) {
 
   return (
     <div className={`pinpad ${error ? 'is-error' : ''}`}>
-      <div className="pin-dots" aria-label={`${pin.length} of ${PIN_LENGTH} digits entered`}>
+      <div className="pin-dots" aria-label={t('{n} of {total} digits entered', { n: pin.length, total: PIN_LENGTH })}>
         {Array.from({ length: PIN_LENGTH }, (_, i) => (
           <span key={i} className={`pin-dot ${i < pin.length ? 'is-on' : ''}`} />
         ))}
       </div>
       <p className="pin-message" aria-live="polite">
-        {busy ? 'Checking…' : error || ' '}
+        {busy ? t('Checking…') : error ? t(error) : ' '}
       </p>
       <div className="pin-keys">
         {KEYS.map((k, i) =>
           k ? (
-            <button key={i} type="button" className="pin-key" onClick={() => press(k)} disabled={busy} aria-label={k === '⌫' ? 'Delete' : k}>
+            <button key={i} type="button" className="pin-key" onClick={() => press(k)} disabled={busy} aria-label={k === '⌫' ? t('Delete') : k}>
               {k}
             </button>
           ) : (
@@ -67,11 +69,12 @@ export default function PinPad({ error, busy, onComplete }) {
 
 // Asks for a new PIN twice so a typo does not lock the explorer out.
 export function NewPin({ busy, error: outerError, onDone }) {
+  const t = useT()
   const [first, setFirst] = useState(null)
   const [error, setError] = useState('')
   return (
     <div className="new-pin">
-      <p className="new-pin-step">{first ? 'Type the same PIN again' : `Choose a ${PIN_LENGTH}-digit PIN`}</p>
+      <p className="new-pin-step">{first ? t('Type the same PIN again') : t('Choose a {n}-digit PIN', { n: PIN_LENGTH })}</p>
       <PinPad
         key={first ? 'confirm' : 'choose'}
         busy={busy}

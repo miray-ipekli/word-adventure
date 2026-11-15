@@ -2,14 +2,16 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { checkTyped, distractors, gapSentence, QUESTION_LABEL } from '../lib/srs.js'
 import { caps, listen, matchWord, MIC_ERRORS, speak } from '../lib/speech.js'
 import { play } from '../lib/sound.js'
+import { useT } from '../lib/i18n.js'
 
 export function SpeakerButton({ text, slow, big, label = 'Listen' }) {
+  const t = useT()
   if (!caps.tts) return null
   return (
     <button
       type="button"
       className={`speaker ${big ? 'speaker-big' : ''}`}
-      aria-label={slow ? `${label} slowly` : label}
+      aria-label={slow ? t('{label} slowly', { label: t(label) }) : t(label)}
       onClick={() => speak(text, { slow })}
     >
       <span aria-hidden="true">{slow ? '🐢' : '🔊'}</span>
@@ -41,13 +43,14 @@ export function Example({ word }) {
 
 // ☆ / ★ toggle. Starred words come back in practice even when they are already known.
 export function StarButton({ word, on, onToggle }) {
+  const t = useT()
   return (
     <button
       type="button"
       className={`star-btn ${on ? 'is-on' : ''}`}
       aria-pressed={on}
-      aria-label={on ? `Remove the star from ${word.en}` : `Star ${word.en}`}
-      title={on ? 'Starred. Tap to remove the star.' : 'Star this word to practice it more'}
+      aria-label={on ? t('Remove the star from {word}', { word: word.en }) : t('Star {word}', { word: word.en })}
+      title={on ? t('Starred. Tap to remove the star.') : t('Star this word to practice it more')}
       onClick={() => {
         play('tap')
         onToggle(word.id)
@@ -59,13 +62,14 @@ export function StarButton({ word, on, onToggle }) {
 }
 
 export function Discover({ word, starred, onStar, onDone }) {
+  const t = useT()
   useEffect(() => {
     play('discover')
     speak(word.en)
   }, [word])
   return (
     <div className="q-card discover">
-      <span className="q-kicker">New word discovered!</span>
+      <span className="q-kicker">{t('New word discovered!')}</span>
       <div className="discover-word">
         <h2 className="word-xl">{word.en}</h2>
         <SpeakerButton text={word.en} />
@@ -81,10 +85,10 @@ export function Discover({ word, starred, onStar, onDone }) {
       )}
       <div className="form-actions">
         <button type="button" className="btn btn-ghost" onClick={() => onDone(true)}>
-          I already know it
+          {t('I already know it')}
         </button>
         <button type="button" className="btn btn-primary" onClick={() => onDone(false)} autoFocus>
-          Got it!
+          {t('Got it!')}
         </button>
       </div>
     </div>
@@ -92,11 +96,12 @@ export function Discover({ word, starred, onStar, onDone }) {
 }
 
 export function Question({ word, type: asked, profile, locked, onResult, onSwitchType }) {
+  const t = useT()
   // Own words may have no usable example sentence; then the gap question becomes a word choice.
   let type = asked
   if (type === 'gap' && !gapSentence(word)) type = 'reverse'
   if (type === 'order' && !word.ex) type = profile.level === 'beginner' ? 'build' : 'type'
-  const label = QUESTION_LABEL[type]
+  const label = t(QUESTION_LABEL[type])
   return (
     <div className="q-card">
       <span className="q-kicker">{label}</span>
@@ -108,7 +113,7 @@ export function Question({ word, type: asked, profile, locked, onResult, onSwitc
         <>
           <div className="q-prompt">
             <h2 className="word-xl word-tr">{word.tr}</h2>
-            <p className="muted">Use “{word.en}” in a sentence</p>
+            <p className="muted">{t('Use “{word}” in a sentence', { word: word.en })}</p>
           </div>
           <SentenceBuilder sentence={word.ex} locked={locked} onResult={onResult} />
         </>
@@ -120,6 +125,7 @@ export function Question({ word, type: asked, profile, locked, onResult, onSwitc
 }
 
 function ChoiceQuestion({ word, type, profile, locked, onResult }) {
+  const t = useT()
   const field = type === 'meaning' ? 'tr' : 'en'
   const options = useMemo(
     () => shuffle([word, ...distractors(word, profile, field)]),
@@ -167,7 +173,7 @@ function ChoiceQuestion({ word, type, profile, locked, onResult }) {
         {type === 'gap' && (
           <>
             <p className="gap-sentence">{gap ?? word.ex}</p>
-            <p className="muted">Hint: {word.tr}</p>
+            <p className="muted">{t('Hint: {tr}', { tr: word.tr })}</p>
           </>
         )}
       </div>
@@ -187,6 +193,7 @@ function ChoiceQuestion({ word, type, profile, locked, onResult }) {
 }
 
 function BuildQuestion({ word, locked, onResult }) {
+  const t = useT()
   const target = word.en.toLowerCase()
   const letters = useMemo(
     () =>
@@ -221,7 +228,7 @@ function BuildQuestion({ word, locked, onResult }) {
         <h2 className="word-xl word-tr">{word.tr}</h2>
         <SpeakerButton text={word.en} />
       </div>
-      <div className="build-slots" aria-label="Your answer">
+      <div className="build-slots" aria-label={t('Your answer')}>
         {slots.map((s) => {
           if (s.fixed) return <span key={s.i} className="build-gap" />
           const k = cursor++
@@ -251,6 +258,7 @@ const tokenKey = (t) => t.toLowerCase().replace(/[^a-z0-9'’-]/g, '')
 
 // Word tiles to put in order. Used for phrases, the Story Tower and the role-play fallback.
 export function SentenceBuilder({ sentence, locked, onResult }) {
+  const t = useT()
   const tokens = useMemo(() => sentence.split(/\s+/).map((t, i) => ({ t, i, key: tokenKey(t) })), [sentence])
   const tiles = useMemo(() => {
     let mixed = shuffle(tokens)
@@ -273,7 +281,7 @@ export function SentenceBuilder({ sentence, locked, onResult }) {
 
   return (
     <>
-      <div className="order-answer" aria-label="Your sentence">
+      <div className="order-answer" aria-label={t('Your sentence')}>
         {placed.length ? (
           placed.map((tile, k) => (
             <button key={tile.i} type="button" className="tile tile-word is-placed" onClick={() => !done && setPlaced(placed.filter((_, j) => j !== k))}>
@@ -281,7 +289,7 @@ export function SentenceBuilder({ sentence, locked, onResult }) {
             </button>
           ))
         ) : (
-          <span className="muted">Tap the words in the right order</span>
+          <span className="muted">{t('Tap the words in the right order')}</span>
         )}
       </div>
       <div className="build-tiles">
@@ -302,6 +310,7 @@ export function SentenceBuilder({ sentence, locked, onResult }) {
 }
 
 function TypeQuestion({ word, locked, onResult }) {
+  const t = useT()
   const [value, setValue] = useState('')
   const [hint, setHint] = useState(false)
   const [done, setDone] = useState(false)
@@ -313,14 +322,14 @@ function TypeQuestion({ word, locked, onResult }) {
     if (done || locked || !value.trim()) return
     const r = checkTyped(value, word.en)
     setDone(true)
-    onResult(r.correct, r.correct && !r.exact ? `Almost perfect! It's spelled "${word.en}".` : null)
+    onResult(r.correct, r.correct && !r.exact ? t('Almost perfect! It\'s spelled "{word}".', { word: word.en }) : null)
   }
 
   return (
     <form onSubmit={submit} className="type-form">
       <div className="q-prompt">
         <h2 className="word-xl word-tr">{word.tr}</h2>
-        {hint && <p className="muted">Starts with “{word.en.slice(0, 2)}…” · {word.en.length} letters</p>}
+        {hint && <p className="muted">{t('Starts with “{start}…” · {n} letters', { start: word.en.slice(0, 2), n: word.en.length })}</p>}
       </div>
       <input
         ref={input}
@@ -329,17 +338,17 @@ function TypeQuestion({ word, locked, onResult }) {
         autoComplete="off"
         autoCapitalize="off"
         spellCheck="false"
-        placeholder="Type the English word"
+        placeholder={t('Type the English word')}
         value={value}
         disabled={done}
         onChange={(e) => setValue(e.target.value)}
       />
       <div className="form-actions">
         <button type="button" className="btn btn-ghost" disabled={hint || done} onClick={() => setHint(true)}>
-          Show a hint
+          {t('Show a hint')}
         </button>
         <button type="submit" className="btn btn-primary" disabled={!value.trim() || done}>
-          Check
+          {t('Check')}
         </button>
       </div>
     </form>
@@ -347,6 +356,7 @@ function TypeQuestion({ word, locked, onResult }) {
 }
 
 function SpeakQuestion({ word, locked, onResult, onSkip }) {
+  const t = useT()
   const [state, setState] = useState('idle') // idle | listening | retry | done
   const [heard, setHeard] = useState('')
   const [error, setError] = useState('')
@@ -368,11 +378,11 @@ function SpeakQuestion({ word, locked, onResult, onSkip }) {
         play('wrong')
       } else {
         setState('done')
-        onResult(false, r.heard ? `I heard “${r.heard}”.` : null)
+        onResult(false, r.heard ? t('I heard “{heard}”.', { heard: r.heard }) : null)
       }
     } catch (e) {
       setState('idle')
-      setError(MIC_ERRORS[e.message] ?? 'Something went wrong with the microphone.')
+      setError(t(MIC_ERRORS[e.message] ?? 'Something went wrong with the microphone.'))
     }
   }
 
@@ -391,19 +401,19 @@ function SpeakQuestion({ word, locked, onResult, onSkip }) {
         className={`mic ${state === 'listening' ? 'is-listening' : ''}`}
         onClick={record}
         disabled={state === 'done'}
-        aria-label="Tap and say the word"
+        aria-label={t('Tap and say the word')}
       >
         <span aria-hidden="true">🎙️</span>
       </button>
       <p className="mic-status" aria-live="polite">
-        {state === 'listening' && 'Listening… say the word now'}
-        {state === 'idle' && !error && 'Tap the microphone and say the word'}
-        {state === 'retry' && `I heard “${heard || '…'}”. One more try!`}
+        {state === 'listening' && t('Listening… say the word now')}
+        {state === 'idle' && !error && t('Tap the microphone and say the word')}
+        {state === 'retry' && t('I heard “{heard}”. One more try!', { heard: heard || '…' })}
       </p>
       {error && <p className="error-note">{error}</p>}
       {state !== 'done' && (
         <button type="button" className="btn btn-ghost btn-small" onClick={onSkip}>
-          I can't speak right now, let me type
+          {t("I can't speak right now, let me type")}
         </button>
       )}
     </>

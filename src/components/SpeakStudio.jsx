@@ -3,6 +3,7 @@ import { CUSTOM_TOPIC, topicById } from '../data/topics.js'
 import { activeWords } from '../lib/srs.js'
 import { caps, listen, matchSentence, MIC_ERRORS } from '../lib/speech.js'
 import { play } from '../lib/sound.js'
+import { useT } from '../lib/i18n.js'
 import { SpeakerButton } from './Questions.jsx'
 
 function starsFor(score) {
@@ -13,6 +14,7 @@ function starsFor(score) {
 }
 
 export default function SpeakStudio({ profile, actions, onExit }) {
+  const t = useT()
   const topics = [...profile.topics, ...(profile.custom.length ? [CUSTOM_TOPIC.id] : [])]
   const [topicId, setTopicId] = useState('all')
   const [pos, setPos] = useState(0)
@@ -49,7 +51,7 @@ export default function SpeakStudio({ profile, actions, onExit }) {
       }
     } catch (e) {
       setState('idle')
-      setError(MIC_ERRORS[e.message] ?? 'Something went wrong with the microphone.')
+      setError(t(MIC_ERRORS[e.message] ?? 'Something went wrong with the microphone.'))
     }
   }
 
@@ -70,7 +72,7 @@ export default function SpeakStudio({ profile, actions, onExit }) {
   return (
     <div className="screen session-screen">
       <header className="session-top">
-        <button type="button" className="icon-btn" onClick={onExit} aria-label="Back to the map">
+        <button type="button" className="icon-btn" onClick={onExit} aria-label={t('Back to the map')}>
           ✕
         </button>
         <h1 className="session-title">Speak Studio</h1>
@@ -78,12 +80,12 @@ export default function SpeakStudio({ profile, actions, onExit }) {
       </header>
 
       <main className="session-stage studio">
-        <div className="filter-row" role="tablist" aria-label="Topic">
+        <div className="filter-row" role="tablist" aria-label={t('Topic')}>
           <button type="button" role="tab" aria-selected={topicId === 'all'} className={`filter ${topicId === 'all' ? 'is-on' : ''}`} onClick={() => pickTopic('all')}>
-            All islands
+            {t('All islands')}
           </button>
           {topics.map((id) => {
-            const t = topicById(id)
+            const topic = topicById(id)
             return (
               <button
                 key={id}
@@ -91,10 +93,10 @@ export default function SpeakStudio({ profile, actions, onExit }) {
                 role="tab"
                 aria-selected={topicId === id}
                 className={`filter ${topicId === id ? 'is-on' : ''}`}
-                style={{ '--topic': t.color }}
+                style={{ '--topic': topic.color }}
                 onClick={() => pickTopic(id)}
               >
-                <span aria-hidden="true">{t.icon}</span> {t.name}
+                <span aria-hidden="true">{topic.icon}</span> {t(topic.name)}
               </button>
             )
           })}
@@ -103,7 +105,7 @@ export default function SpeakStudio({ profile, actions, onExit }) {
         {word ? (
           <div className="panel sticker q-panel">
             <div className="q-card">
-              <span className="q-kicker">Listen, then say the whole sentence</span>
+              <span className="q-kicker">{t('Listen, then say the whole sentence')}</span>
               <p className="studio-sentence">
                 {word.ex.split(/\s+/).map((w, i) => (
                   <span
@@ -115,7 +117,7 @@ export default function SpeakStudio({ profile, actions, onExit }) {
                 ))}
               </p>
               <p className="muted">
-                Key word: <strong>{word.en}</strong> · {word.tr}
+                {t('Key word:')} <strong>{word.en}</strong> · {word.tr}
               </p>
               <div className="listen-prompt">
                 <SpeakerButton text={word.ex} big label="Listen to the sentence" />
@@ -129,20 +131,21 @@ export default function SpeakStudio({ profile, actions, onExit }) {
                     className={`mic ${state === 'listening' ? 'is-listening' : ''}`}
                     onClick={record}
                     disabled={state === 'listening'}
-                    aria-label="Tap and say the sentence"
+                    aria-label={t('Tap and say the sentence')}
                   >
                     <span aria-hidden="true">🎙️</span>
                   </button>
                   <p className="mic-status" aria-live="polite">
-                    {state === 'listening' && 'Listening… read the sentence out loud'}
-                    {state === 'idle' && !error && 'Tap the microphone and read the sentence'}
+                    {state === 'listening' && t('Listening… read the sentence out loud')}
+                    {state === 'idle' && !error && t('Tap the microphone and read the sentence')}
                     {state === 'result' && result && (
                       <>
-                        <span className="stars" aria-label={`${starsFor(result.score)} of 3 stars`}>
+                        <span className="stars" aria-label={t('{n} of 3 stars', { n: starsFor(result.score) })}>
                           {'★'.repeat(starsFor(result.score))}
                           <span className="dim">{'★'.repeat(3 - starsFor(result.score))}</span>
                         </span>{' '}
-                        {result.score}% matched{result.heard ? ` · I heard “${result.heard}”` : ''}
+                        {t('{n}% matched', { n: result.score })}
+                        {result.heard ? ` · ${t('I heard “{heard}”', { heard: result.heard })}` : ''}
                       </>
                     )}
                   </p>
@@ -150,27 +153,27 @@ export default function SpeakStudio({ profile, actions, onExit }) {
                 </>
               ) : (
                 <p className="error-note">
-                  This browser cannot listen to your voice. You can still listen and repeat out loud. For scoring, open the game in Chrome or Edge.
+                  {t('This browser cannot listen to your voice. You can still listen and repeat out loud. For scoring, open the game in Chrome or Edge.')}
                 </p>
               )}
 
               <div className="form-actions">
                 {state === 'result' ? (
                   <button type="button" className="btn btn-ghost" onClick={record}>
-                    Try again
+                    {t('Try again')}
                   </button>
                 ) : (
                   <span />
                 )}
                 <button type="button" className="btn btn-primary" onClick={nextSentence}>
-                  Next sentence
+                  {t('Next sentence')}
                 </button>
               </div>
             </div>
           </div>
         ) : (
           <div className="panel sticker end-card">
-            <p>No sentences here yet. Explore an island first.</p>
+            <p>{t('No sentences here yet. Explore an island first.')}</p>
           </div>
         )}
       </main>

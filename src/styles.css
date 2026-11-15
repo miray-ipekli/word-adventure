@@ -136,7 +136,24 @@ p {
   padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
 
+/* Menu language switch in the top-right corner of the start and sign-up screens. */
+.sea-screen > .screen-corner {
+  position: absolute;
+  top: 14px;
+  right: max(16px, env(safe-area-inset-right, 0px));
+  z-index: 2;
+}
+
+.sea-screen:has(> .screen-corner) {
+  padding-top: 64px;
+}
+
+.lang-switch {
+  background: var(--paper);
+}
+
 .sea-screen {
+  position: relative;
   display: grid;
   place-items: center;
   background:

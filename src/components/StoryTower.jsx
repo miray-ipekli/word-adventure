@@ -3,6 +3,7 @@ import { islandContent, topicById } from '../data/topics.js'
 import { activeWords } from '../lib/srs.js'
 import { caps, speak, speakLines } from '../lib/speech.js'
 import { play } from '../lib/sound.js'
+import { useT } from '../lib/i18n.js'
 import { SentenceBuilder, SpeakerButton } from './Questions.jsx'
 
 // Highlights the island's words and phrases inside a line of the story.
@@ -20,6 +21,7 @@ function Highlighted({ text, terms }) {
 const spoken = (line) => line.replace(/^[A-Z][\w ]{0,20}:\s*/, '')
 
 export default function StoryTower({ profile, topicId, actions, onDone, onExit }) {
+  const t = useT()
   const { story } = islandContent(topicId, profile.level)
   const terms = useMemo(() => activeWords(profile, topicId).map((w) => w.en), [profile, topicId])
   const [phase, setPhase] = useState('read') // read | quiz | build | done
@@ -65,28 +67,28 @@ export default function StoryTower({ profile, topicId, actions, onDone, onExit }
   return (
     <div className="screen session-screen">
       <header className="session-top">
-        <button type="button" className="icon-btn" onClick={onExit} aria-label="Back to the island">
+        <button type="button" className="icon-btn" onClick={onExit} aria-label={t('Back to the island')}>
           ✕
         </button>
         <h1 className="session-title">
-          📖 {topicById(topicId).name} · Story Tower
+          📖 {t(topicById(topicId).name)} · {t('Story Tower')}
         </h1>
       </header>
 
       <main className="session-stage">
         {phase === 'read' && (
           <div className="panel sticker story">
-            <span className="q-kicker">Read and listen</span>
+            <span className="q-kicker">{t('Read and listen')}</span>
             <h2 className="title-lg">{story.title}</h2>
             {caps.tts && (
               <button type="button" className="btn" onClick={listenAll}>
-                {reading >= 0 ? '⏹ Stop' : '▶ Listen to the story'}
+                {reading >= 0 ? `⏹ ${t('Stop')}` : `▶ ${t('Listen to the story')}`}
               </button>
             )}
             <div className="story-lines">
               {story.lines.map((line, i) => (
                 <p key={i} className={`story-line ${reading === i ? 'is-reading' : ''}`}>
-                  <button type="button" className="line-play" onClick={() => speak(spoken(line))} aria-label="Listen to this line">
+                  <button type="button" className="line-play" onClick={() => speak(spoken(line))} aria-label={t('Listen to this line')}>
                     🔊
                   </button>
                   <span>
@@ -103,7 +105,7 @@ export default function StoryTower({ profile, topicId, actions, onDone, onExit }
                 setPhase('quiz')
               }}
             >
-              I read it · Questions
+              {t('I read it · Questions')}
             </button>
           </div>
         )}
@@ -111,9 +113,7 @@ export default function StoryTower({ profile, topicId, actions, onDone, onExit }
         {phase === 'quiz' && (
           <div className="panel sticker q-panel">
             <div className="q-card">
-              <span className="q-kicker">
-                Question {q + 1} of {story.questions.length}
-              </span>
+              <span className="q-kicker">{t('Question {n} of {total}', { n: q + 1, total: story.questions.length })}</span>
               <h2 className="title-md">{story.questions[q][0]}</h2>
               <div className="options options-1">
                 {story.questions[q][1].map((opt, i) => {
@@ -128,7 +128,7 @@ export default function StoryTower({ profile, topicId, actions, onDone, onExit }
               </div>
               {picked !== null && (
                 <button type="button" className="btn btn-primary" onClick={nextQuestion} autoFocus>
-                  Continue
+                  {t('Continue')}
                 </button>
               )}
             </div>
@@ -138,9 +138,7 @@ export default function StoryTower({ profile, topicId, actions, onDone, onExit }
         {phase === 'build' && (
           <div className="panel sticker q-panel" key={b}>
             <div className="q-card">
-              <span className="q-kicker">
-                Build a sentence from the story · {b + 1} of {story.build.length}
-              </span>
+              <span className="q-kicker">{t('Build a sentence from the story · {n} of {total}', { n: b + 1, total: story.build.length })}</span>
               <SentenceBuilder
                 sentence={story.build[b]}
                 locked={built !== null}
@@ -153,11 +151,11 @@ export default function StoryTower({ profile, topicId, actions, onDone, onExit }
               {built !== null && (
                 <>
                   <p className={built ? 'success-note' : 'error-note'}>
-                    {built ? 'Perfect sentence!' : 'Almost. The sentence is:'} <strong>{story.build[b]}</strong>{' '}
+                    {built ? t('Perfect sentence!') : t('Almost. The sentence is:')} <strong>{story.build[b]}</strong>{' '}
                     <SpeakerButton text={story.build[b]} />
                   </p>
                   <button type="button" className="btn btn-primary" onClick={nextBuild} autoFocus>
-                    Continue
+                    {t('Continue')}
                   </button>
                 </>
               )}
@@ -170,23 +168,23 @@ export default function StoryTower({ profile, topicId, actions, onDone, onExit }
             <div className="big-icon" aria-hidden="true">
               📜
             </div>
-            <h2 className="title-lg">Story complete!</h2>
+            <h2 className="title-lg">{t('Story complete!')}</h2>
             <div className="stat-row">
               <div className="stat stat-learning">
                 <strong className="tabular">
                   {score.quiz}/{story.questions.length}
                 </strong>
-                <span>Questions</span>
+                <span>{t('Questions')}</span>
               </div>
               <div className="stat stat-mastered">
                 <strong className="tabular">
                   {score.build}/{story.build.length}
                 </strong>
-                <span>Sentences</span>
+                <span>{t('Sentences')}</span>
               </div>
             </div>
             <button type="button" className="btn btn-primary" onClick={onExit} autoFocus>
-              Back to the island
+              {t('Back to the island')}
             </button>
           </div>
         )}

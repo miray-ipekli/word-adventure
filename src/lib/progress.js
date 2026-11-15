@@ -9,7 +9,7 @@
 // - island records (story read, exam passed...) only move forward, so the later time wins
 // - stars carry the time they were set or removed; the newer change wins
 
-export const SETTINGS = ['name', 'avatar', 'color', 'level', 'topics', 'dailyGoal', 'micOn']
+export const SETTINGS = ['name', 'avatar', 'color', 'level', 'topics', 'dailyGoal', 'micOn', 'lang']
 
 export function todayKey(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -19,7 +19,7 @@ function dayDiff(a, b) {
   return Math.round((new Date(b) - new Date(a)) / 86400000)
 }
 
-export function newProgress({ id, name, avatar, color, level, topics }, now = Date.now()) {
+export function newProgress({ id, name, avatar, color, level, topics, lang }, now = Date.now()) {
   return {
     id,
     name,
@@ -27,6 +27,8 @@ export function newProgress({ id, name, avatar, color, level, topics }, now = Da
     color,
     level,
     topics,
+    // Interface language ('en' or 'tr'); missing on explorers from before the setting existed.
+    ...(lang ? { lang } : {}),
     dailyGoal: 50,
     micOn: true,
     settingsAt: now,

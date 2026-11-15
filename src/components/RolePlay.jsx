@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { islandContent, topicById } from '../data/topics.js'
 import { caps, listen, matchSentence, MIC_ERRORS, speakThen } from '../lib/speech.js'
 import { play } from '../lib/sound.js'
+import { useT } from '../lib/i18n.js'
 import { SentenceBuilder, SpeakerButton } from './Questions.jsx'
 
 const PASS = 70
@@ -10,6 +11,7 @@ const MAX_TRIES = 3
 // The Castle scene: the other character speaks, you answer each line out loud.
 // Without a microphone, your lines are built from word tiles instead.
 export default function RolePlay({ profile, topicId, actions, onDone, onExit }) {
+  const t = useT()
   const { roleplay } = islandContent(topicId, profile.level)
   // Switches the rest of the scene to word tiles when speaking is not possible right now.
   const [tiles, setTiles] = useState(false)
@@ -66,12 +68,12 @@ export default function RolePlay({ profile, topicId, actions, onDone, onExit }) 
       const alts = await listen({ onStart: () => setState('listening') })
       const r = matchSentence(alts, line[1])
       setResult(r)
-      setTries((t) => t + 1)
+      setTries((n) => n + 1)
       setState('result')
       play(r.score >= PASS ? 'correct' : 'wrong')
     } catch (e) {
       setState('idle')
-      setError(MIC_ERRORS[e.message] ?? 'Something went wrong with the microphone.')
+      setError(t(MIC_ERRORS[e.message] ?? 'Something went wrong with the microphone.'))
       // Blocked, missing or unsupported microphone: finish the scene with word tiles instead.
       if (e.message !== 'no-speech') setTiles(true)
     }
@@ -80,7 +82,7 @@ export default function RolePlay({ profile, topicId, actions, onDone, onExit }) 
   return (
     <div className="screen session-screen">
       <header className="session-top">
-        <button type="button" className="icon-btn" onClick={onExit} aria-label="Back to the island">
+        <button type="button" className="icon-btn" onClick={onExit} aria-label={t('Back to the island')}>
           ✕
         </button>
         <h1 className="session-title">🏰 {roleplay.title}</h1>
@@ -101,7 +103,7 @@ export default function RolePlay({ profile, topicId, actions, onDone, onExit }) 
         {line && yourTurn && (
           <div className="panel sticker q-panel">
             <div className="q-card">
-              <span className="q-kicker">Your turn{voice ? ': say this line' : ': build your line'}</span>
+              <span className="q-kicker">{voice ? t('Your turn: say this line') : t('Your turn: build your line')}</span>
               {voice ? (
                 <>
                   <p className="studio-sentence">
@@ -121,47 +123,55 @@ export default function RolePlay({ profile, topicId, actions, onDone, onExit }) 
                     className={`mic ${state === 'listening' ? 'is-listening' : ''}`}
                     onClick={record}
                     disabled={state === 'listening'}
-                    aria-label="Tap and say your line"
+                    aria-label={t('Tap and say your line')}
                   >
                     <span aria-hidden="true">🎙️</span>
                   </button>
                   <p className="mic-status" aria-live="polite">
-                    {state === 'listening' && 'Listening… say your line'}
-                    {state === 'idle' && !error && 'Tap the microphone and say your line'}
-                    {state === 'result' && result && (result.score >= PASS ? `${result.score}% · well said!` : `${result.score}% · the red words need another try`)}
+                    {state === 'listening' && t('Listening… say your line')}
+                    {state === 'idle' && !error && t('Tap the microphone and say your line')}
+                    {state === 'result' &&
+                      result &&
+                      (result.score >= PASS
+                        ? t('{n}% · well said!', { n: result.score })
+                        : t('{n}% · the red words need another try', { n: result.score }))}
                   </p>
                   {error && <p className="error-note">{error}</p>}
                   <div className="form-actions">
                     {state === 'result' && result.score < PASS && tries >= MAX_TRIES ? (
                       <button type="button" className="btn btn-ghost" onClick={moveOn}>
-                        Continue anyway
+                        {t('Continue anyway')}
                       </button>
                     ) : state === 'result' && result.score >= PASS ? (
                       <span />
                     ) : (
                       <button type="button" className="btn btn-ghost btn-small" onClick={() => setTiles(true)} disabled={state === 'listening'}>
-                        I can't speak right now, let me build it
+                        {t("I can't speak right now, let me build it")}
                       </button>
                     )}
                     {state === 'result' && result.score >= PASS && (
                       <button type="button" className="btn btn-primary" onClick={moveOn} autoFocus>
-                        Continue
+                        {t('Continue')}
                       </button>
                     )}
                   </div>
                 </>
               ) : (
                 <>
-                  {error && <p className="error-note">{error} Build your line with the word tiles instead.</p>}
+                  {error && (
+                    <p className="error-note">
+                      {error} {t('Build your line with the word tiles instead.')}
+                    </p>
+                  )}
                   <p className="muted">{line[2]}</p>
                   <SentenceBuilder key={at} sentence={line[1]} locked={built !== null} onResult={(ok) => (play(ok ? 'correct' : 'wrong'), setBuilt(ok))} />
                   {built !== null && (
                     <>
                       <p className={built ? 'success-note' : 'error-note'}>
-                        {built ? 'Well said!' : 'Almost. Your line is:'} <strong>{line[1]}</strong> <SpeakerButton text={line[1]} />
+                        {built ? t('Well said!') : t('Almost. Your line is:')} <strong>{line[1]}</strong> <SpeakerButton text={line[1]} />
                       </p>
                       <button type="button" className="btn btn-primary" onClick={moveOn} autoFocus>
-                        Continue
+                        {t('Continue')}
                       </button>
                     </>
                   )}
@@ -176,13 +186,15 @@ export default function RolePlay({ profile, topicId, actions, onDone, onExit }) 
             <div className="big-icon" aria-hidden="true">
               🎭
             </div>
-            <h2 className="title-lg">Scene complete!</h2>
+            <h2 className="title-lg">{t('Scene complete!')}</h2>
             <p className="muted">
-              {topicById(topicId).name}: the final exam is now open. You need {profile.level === 'beginner' ? 70 : 85}% to conquer the
-              island.
+              {t('{name}: the final exam is now open. You need {pct}% to conquer the island.', {
+                name: t(topicById(topicId).name),
+                pct: profile.level === 'beginner' ? 70 : 85,
+              })}
             </p>
             <button type="button" className="btn btn-primary" onClick={onExit} autoFocus>
-              Back to the island
+              {t('Back to the island')}
             </button>
           </div>
         )}

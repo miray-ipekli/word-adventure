@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { CUSTOM_TOPIC, topicById } from '../data/topics.js'
 import { topicStats } from '../lib/srs.js'
 import { chestProgress, islandState } from '../lib/islands.js'
+import { useT } from '../lib/i18n.js'
 
 // Two hand-placed layouts: a wide one for desktop and a tall one for phones.
 const LAYOUTS = {
@@ -97,16 +98,18 @@ function routePath(stops) {
 }
 
 function Island({ topic, x, y, r, stats, locked, onClick, delay }) {
+  const t = useT()
   const done = stats.conquered
   const pct = Math.round(stats.progress * 100)
-  const bannerW = Math.max(r * 2.3, topic.name.length * 9.6 + 34)
+  const name = t(topic.name)
+  const bannerW = Math.max(r * 2.3, name.length * 9.6 + 34)
   return (
     <g
       className={`island ${locked ? 'is-locked' : ''}`}
       style={{ '--topic': topic.color, animationDelay: `${delay}ms` }}
       role="button"
       tabIndex={0}
-      aria-label={`${topic.name}${locked ? ', locked' : done ? ', conquered' : `, ${pct}% explored`}`}
+      aria-label={locked ? t('{name}, locked', { name }) : done ? t('{name}, conquered', { name }) : t('{name}, {pct}% explored', { name, pct })}
       onClick={onClick}
       onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onClick())}
     >
@@ -134,7 +137,7 @@ function Island({ topic, x, y, r, stats, locked, onClick, delay }) {
       <g className="island-banner">
         <rect x={x - bannerW / 2} y={y + r * 0.78} width={bannerW} height={40} rx={12} />
         <text className="island-name" x={x} y={y + r * 0.78 + 16} textAnchor="middle">
-          {topic.name}
+          {name}
         </text>
         {!locked && (
           <>
@@ -155,6 +158,7 @@ function Island({ topic, x, y, r, stats, locked, onClick, delay }) {
 }
 
 export default function IslandMap({ profile, onIsland, onChest, onCustom }) {
+  const t = useT()
   const L = useLayout()
   const islands = useMemo(
     () =>
@@ -172,7 +176,7 @@ export default function IslandMap({ profile, onIsland, onChest, onCustom }) {
   const boat = L.islands[lastOpen]
 
   return (
-    <svg className="map" viewBox={`0 0 ${L.w} ${L.h}`} role="img" aria-label="Your island map">
+    <svg className="map" viewBox={`0 0 ${L.w} ${L.h}`} role="img" aria-label={t('Your island map')}>
       <defs>
         <pattern id="waves" width="90" height="56" patternUnits="userSpaceOnUse">
           <path d="M8 18 q8 -7 16 0 t16 0" className="wave-line" />
@@ -208,7 +212,7 @@ export default function IslandMap({ profile, onIsland, onChest, onCustom }) {
         <line x1="-28" y1="8" x2="-28" y2="24" />
         <line x1="28" y1="8" x2="28" y2="24" />
         <text y="-18" textAnchor="middle">
-          Harbor
+          {t('Harbor')}
         </text>
       </g>
 
@@ -217,7 +221,7 @@ export default function IslandMap({ profile, onIsland, onChest, onCustom }) {
         style={{ '--topic': CUSTOM_TOPIC.color }}
         role="button"
         tabIndex={0}
-        aria-label={`My Island, ${customStats.total} words of your own`}
+        aria-label={t('My Island, {n} words of your own', { n: customStats.total })}
         onClick={onCustom}
         onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onCustom())}
       >
@@ -227,7 +231,7 @@ export default function IslandMap({ profile, onIsland, onChest, onCustom }) {
           {CUSTOM_TOPIC.icon}
         </text>
         <text className="island-caption" x={L.custom[0]} y={L.custom[1] + L.r * 0.82} textAnchor="middle">
-          {customStats.total ? `My Island · ${customStats.total}` : '+ My words'}
+          {customStats.total ? `${t('My Island')} · ${customStats.total}` : `+ ${t('My words')}`}
         </text>
       </g>
 
@@ -258,7 +262,11 @@ export default function IslandMap({ profile, onIsland, onChest, onCustom }) {
         transform={`translate(${L.chest[0]} ${L.chest[1]})`}
         role="button"
         tabIndex={0}
-        aria-label={chest.ready ? 'Treasure chest is ready to open' : `Treasure chest: ${chest.conquered} of ${chest.total} islands conquered`}
+        aria-label={
+          chest.ready
+            ? t('Treasure chest is ready to open')
+            : t('Treasure chest: {n} of {total} islands conquered', { n: chest.conquered, total: chest.total })
+        }
         onClick={onChest}
         onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onChest())}
       >
@@ -268,7 +276,7 @@ export default function IslandMap({ profile, onIsland, onChest, onCustom }) {
         <path className="chest-lid" d="M-30,-6 q30,-30 60,0 z" />
         <rect className="chest-lock" x="-6" y="-2" width="12" height="13" rx="2" />
         <text className="island-caption" y="64" textAnchor="middle">
-          {chest.ready ? 'Open me!' : `${chest.conquered}/${chest.total} 🚩`}
+          {chest.ready ? t('Open me!') : `${chest.conquered}/${chest.total} 🚩`}
         </text>
       </g>
     </svg>

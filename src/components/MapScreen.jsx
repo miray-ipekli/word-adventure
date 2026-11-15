@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { CUSTOM_TOPIC, topicById } from '../data/topics.js'
+import { CUSTOM_TOPIC } from '../data/topics.js'
 import { liveStreak, rankInfo, todayXp, totalXp } from '../lib/progress.js'
 import { activeWords, dueCount, levelName, nextDueAt, nextLevel, starredWords, trickyWords } from '../lib/srs.js'
 import { chestProgress } from '../lib/islands.js'
 import { play } from '../lib/sound.js'
+import { useT } from '../lib/i18n.js'
 import { Avatar } from './Pickers.jsx'
 import IslandMap from './IslandMap.jsx'
 import Modal from './Modal.jsx'
@@ -22,61 +23,63 @@ function GoalRing({ value, goal }) {
 const SYNC_LABEL = { saved: 'Saved', saving: 'Saving…', offline: 'Offline · will sync', gone: 'Not saved · sign in again' }
 
 function Hud({ profile, sound, sync, onSwitch, onSettings }) {
+  const t = useT()
   const rank = rankInfo(totalXp(profile))
   const xpToday = todayXp(profile)
   const streak = liveStreak(profile)
   return (
     <header className="hud sticker">
-      <button type="button" className="hud-who" onClick={onSwitch} title="Switch explorer">
+      <button type="button" className="hud-who" onClick={onSwitch} title={t('Switch explorer')}>
         <Avatar avatar={profile.avatar} color={profile.color} size={44} />
         <span className="hud-name">
           <strong>{profile.name}</strong>
-          <span className="chip chip-sm">{levelName(profile.level)}</span>
+          <span className="chip chip-sm">{t(levelName(profile.level))}</span>
         </span>
       </button>
-      <div className="hud-rank" title={`${rank.into} / ${rank.need} XP to the next rank`}>
-        <span className="hud-label">Rank {rank.rank}</span>
+      <div className="hud-rank" title={t('{into} / {need} XP to the next rank', { into: rank.into, need: rank.need })}>
+        <span className="hud-label">{t('Rank {n}', { n: rank.rank })}</span>
         <span className="xp-bar">
           <span style={{ width: `${(rank.into / rank.need) * 100}%` }} />
         </span>
       </div>
       <div className="hud-stats">
-        <span className={`sync sync-${sync}`} title="Your progress is saved to the cloud">
-          {SYNC_LABEL[sync]}
+        <span className={`sync sync-${sync}`} title={t('Your progress is saved to the cloud')}>
+          {t(SYNC_LABEL[sync])}
         </span>
-        <span className={`hud-stat streak ${streak ? 'is-on' : ''}`} title="Days in a row">
+        <span className={`hud-stat streak ${streak ? 'is-on' : ''}`} title={t('Days in a row')}>
           <span aria-hidden="true">🔥</span> {streak}
         </span>
-        <span className="hud-stat" title="Daily goal">
+        <span className="hud-stat" title={t('Daily goal')}>
           <GoalRing value={xpToday} goal={profile.dailyGoal} />
           <span className="tabular">
             {Math.min(xpToday, profile.dailyGoal)}/{profile.dailyGoal}
           </span>
         </span>
-        <button type="button" className="icon-btn" onClick={sound.toggle} aria-label={sound.on ? 'Mute sounds' : 'Turn sounds on'}>
+        <button type="button" className="icon-btn" onClick={sound.toggle} aria-label={sound.on ? t('Mute sounds') : t('Turn sounds on')}>
           {sound.on ? '🔊' : '🔈'}
         </button>
-        <button type="button" className="icon-btn" onClick={onSettings} aria-label="Settings">
+        <button type="button" className="icon-btn" onClick={onSettings} aria-label={t('Settings')}>
           ⚙️
         </button>
-        <button type="button" className="btn btn-small hud-signout" onClick={onSwitch} title="Back to the explorer list">
-          <span aria-hidden="true">🚪</span> Sign out
+        <button type="button" className="btn btn-small hud-signout" onClick={onSwitch} title={t('Back to the explorer list')}>
+          <span aria-hidden="true">🚪</span> {t('Sign out')}
         </button>
       </div>
     </header>
   )
 }
 
-function formatWait(ms) {
+function formatWait(ms, t) {
   const min = Math.ceil(ms / 60000)
-  if (min < 60) return `${min} min`
+  if (min < 60) return t('{n} min', { n: min })
   const h = Math.round(min / 60)
-  if (h < 24) return `${h} h`
-  return `${Math.round(h / 24)} days`
+  if (h < 24) return t('{n} h', { n: h })
+  return t('{n} days', { n: Math.round(h / 24) })
 }
 
 export default function MapScreen(props) {
   const { profile, sound, sync, onStarred, onIsland, onReview, onTricky, onSpeak, onWords, onSettings, onSwitch, onLevelUp } = props
+  const t = useT()
   const [chestOpen, setChestOpen] = useState(false)
 
   const due = dueCount(profile)
@@ -96,7 +99,7 @@ export default function MapScreen(props) {
       <Hud profile={profile} sound={sound} sync={sync} onSwitch={onSwitch} onSettings={onSettings} />
 
       <div className="map-layout">
-        <section className="map-frame sticker" aria-label="Map">
+        <section className="map-frame sticker" aria-label={t('Map')}>
           <IslandMap
             profile={profile}
             onIsland={openIsland}
@@ -106,7 +109,7 @@ export default function MapScreen(props) {
         </section>
 
         <aside className="quests">
-          <h2 className="quests-title">Today's quests</h2>
+          <h2 className="quests-title">{t("Today's quests")}</h2>
 
           <article className={`quest sticker ${due ? 'quest-hot' : ''}`}>
             <div className="quest-head">
@@ -114,18 +117,18 @@ export default function MapScreen(props) {
                 🧭
               </span>
               <div>
-                <h3>Daily review</h3>
+                <h3>{t('Daily review')}</h3>
                 <p className="muted">
                   {due
-                    ? `${due} word${due > 1 ? 's are' : ' is'} ready to review.`
+                    ? t.plural(due, '{n} word is ready to review.', '{n} words are ready to review.')
                     : nextDue
-                      ? `All caught up. Next review in ${formatWait(nextDue - Date.now())}.`
-                      : 'Explore an island to collect your first words.'}
+                      ? t('All caught up. Next review in {wait}.', { wait: formatWait(nextDue - Date.now(), t) })
+                      : t('Explore an island to collect your first words.')}
                 </p>
               </div>
             </div>
             <button type="button" className="btn btn-primary btn-block" disabled={!due} onClick={onReview}>
-              {due ? `Review ${due} word${due > 1 ? 's' : ''}` : 'Nothing to review'}
+              {due ? t.plural(due, 'Review {n} word', 'Review {n} words') : t('Nothing to review')}
             </button>
           </article>
 
@@ -135,11 +138,11 @@ export default function MapScreen(props) {
                 🐙
               </span>
               <div>
-                <h3>Tricky words</h3>
+                <h3>{t('Tricky words')}</h3>
                 <p className="muted">
                   {tricky.length
-                    ? 'Words you missed come back here until you beat them.'
-                    : 'Miss a word and it joins the boss fight. None yet!'}
+                    ? t('Words you missed come back here until you beat them.')
+                    : t('Miss a word and it joins the boss fight. None yet!')}
                 </p>
               </div>
             </div>
@@ -154,7 +157,7 @@ export default function MapScreen(props) {
               </ul>
             )}
             <button type="button" className="btn btn-boss btn-block" disabled={!tricky.length} onClick={onTricky}>
-              {tricky.length ? `Fight ${tricky.length} tricky word${tricky.length > 1 ? 's' : ''}` : 'No tricky words'}
+              {tricky.length ? t.plural(tricky.length, 'Fight {n} tricky word', 'Fight {n} tricky words') : t('No tricky words')}
             </button>
           </article>
 
@@ -164,11 +167,11 @@ export default function MapScreen(props) {
                 ⭐
               </span>
               <div>
-                <h3>Starred words</h3>
+                <h3>{t('Starred words')}</h3>
                 <p className="muted">
                   {starred.length
-                    ? 'Your chosen words. They also come back in every daily review.'
-                    : 'Tap ☆ next to any word to keep practicing it, even when you know it.'}
+                    ? t('Your chosen words. They also come back in every daily review.')
+                    : t('Tap ☆ next to any word to keep practicing it, even when you know it.')}
                 </p>
               </div>
             </div>
@@ -184,11 +187,11 @@ export default function MapScreen(props) {
             )}
             <div className="quest-actions">
               <button type="button" className="btn btn-star" disabled={!starred.length} onClick={onStarred}>
-                {starred.length ? `Practice ${starred.length} starred` : 'No starred words'}
+                {starred.length ? t('Practice {n} starred', { n: starred.length }) : t('No starred words')}
               </button>
               {starred.length > 0 && (
                 <button type="button" className="btn btn-ghost btn-small" onClick={() => onWords('starred')}>
-                  See all
+                  {t('See all')}
                 </button>
               )}
             </div>
@@ -201,7 +204,7 @@ export default function MapScreen(props) {
               </span>
               <span>
                 <strong>Speak Studio</strong>
-                <span className="muted">Listen, repeat, get a score</span>
+                <span className="muted">{t('Listen, repeat, get a score')}</span>
               </span>
             </button>
             <button type="button" className="quest quest-small sticker" onClick={() => onWords()}>
@@ -209,8 +212,8 @@ export default function MapScreen(props) {
                 📒
               </span>
               <span>
-                <strong>My words</strong>
-                <span className="muted">Add words you heard today</span>
+                <strong>{t('My words')}</strong>
+                <span className="muted">{t('Add words you heard today')}</span>
               </span>
             </button>
           </div>
@@ -218,21 +221,24 @@ export default function MapScreen(props) {
       </div>
 
       {chestOpen && (
-        <Modal onClose={() => setChestOpen(false)} label="Treasure chest">
+        <Modal onClose={() => setChestOpen(false)} label={t('Treasure chest')}>
           <div className="chest-dialog">
             <div className="big-icon" aria-hidden="true">
               {chest.ready ? '💎' : '🗝️'}
             </div>
             {chest.ready && upcoming ? (
               <>
-                <h2 className="title-lg">Treasure found!</h2>
+                <h2 className="title-lg">{t('Treasure found!')}</h2>
                 <p>
-                  You conquered all {chest.total} islands at {levelName(profile.level)} level. You are ready for{' '}
-                  <strong>{upcoming.name}</strong>. Your progress so far stays with you.
+                  {t('You conquered all {n} islands at {level} level. You are ready for {next}. Your progress so far stays with you.', {
+                    n: chest.total,
+                    level: t(levelName(profile.level)),
+                    next: t(upcoming.name),
+                  })}
                 </p>
                 <div className="form-actions">
                   <button type="button" className="btn btn-ghost" onClick={() => setChestOpen(false)}>
-                    Stay a bit longer
+                    {t('Stay a bit longer')}
                   </button>
                   <button
                     type="button"
@@ -243,24 +249,24 @@ export default function MapScreen(props) {
                       setChestOpen(false)
                     }}
                   >
-                    Go to {upcoming.name}
+                    {t('Go to {level}', { level: t(upcoming.name) })}
                   </button>
                 </div>
               </>
             ) : chest.ready ? (
               <>
-                <h2 className="title-lg">You conquered every level!</h2>
-                <p>Keep your words fresh with daily reviews, add your own words and practice speaking.</p>
+                <h2 className="title-lg">{t('You conquered every level!')}</h2>
+                <p>{t('Keep your words fresh with daily reviews, add your own words and practice speaking.')}</p>
               </>
             ) : (
               <>
-                <h2 className="title-lg">The chest is locked</h2>
+                <h2 className="title-lg">{t('The chest is locked')}</h2>
                 <p>
-                  It opens when you have conquered all {chest.total} islands. Islands conquered so far:{' '}
+                  {t('It opens when you have conquered all {n} islands. Islands conquered so far:', { n: chest.total })}{' '}
                   <strong>
                     {chest.conquered} / {chest.total}
                   </strong>
-                  . Each island ends with a castle: a role-play scene and a final exam.
+                  . {t('Each island ends with a castle: a role-play scene and a final exam.')}
                 </p>
                 <div className="meter">
                   <span style={{ width: `${chest.total ? (chest.conquered / chest.total) * 100 : 0}%` }} />
