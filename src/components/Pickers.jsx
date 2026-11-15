@@ -1,36 +1,100 @@
+import { useState } from 'react'
 import { LEVELS, TOPICS, PICK_COUNT } from '../data/topics.js'
-import { AVATARS, AVATAR_COLORS } from '../lib/storage.js'
+import { AVATAR_COLORS, AVATAR_GROUPS, avatarGroupOf, CANARY } from '../lib/storage.js'
+import { isManifestAvatar, manifestMember } from '../data/manifest.js'
 import { play } from '../lib/sound.js'
+import ManifestPhoto from './ManifestPhoto.jsx'
+import CanaryArt from './CanaryArt.jsx'
+import manifestLogo from '../assets/manifest/logo.webp'
+
+// An avatar is an emoji, the drawn canary, or the id of a Manifest member's photo.
+function AvatarArt({ avatar }) {
+  if (avatar === CANARY) return <CanaryArt />
+  return isManifestAvatar(avatar) ? <ManifestPhoto avatar={avatar} /> : avatar
+}
 
 export function Avatar({ avatar, color, size = 56 }) {
   return (
-    <span className="avatar" style={{ '--avatar-bg': color, width: size, height: size, fontSize: size * 0.55 }}>
-      {avatar}
+    <span
+      className={`avatar ${isManifestAvatar(avatar) ? 'is-photo' : ''}`}
+      style={{ '--avatar-bg': color, width: size, height: size, fontSize: size * 0.55 }}
+    >
+      <AvatarArt avatar={avatar} />
+    </span>
+  )
+}
+
+// The picture on each group's card.
+function GroupArt({ id }) {
+  if (id === 'manifest') return <img className="group-logo" src={manifestLogo} alt="" draggable="false" />
+  return (
+    <span className="group-animals" aria-hidden="true">
+      <span>🐼</span>
+      <span>🦊</span>
+      <span>🐯</span>
     </span>
   )
 }
 
 export function AvatarPicker({ avatar, color, onChange }) {
+  // The group of the current avatar starts open; tapping an open group closes it again.
+  const [open, setOpen] = useState(() => avatarGroupOf(avatar))
+  const current = avatarGroupOf(avatar)
+  const group = AVATAR_GROUPS.find((g) => g.id === open)
+
   return (
     <div className="avatar-picker">
-      <div className="avatar-grid" role="radiogroup" aria-label="Avatar">
-        {AVATARS.map((a) => (
+      <div className="avatar-groups">
+        {AVATAR_GROUPS.map((g) => (
           <button
-            key={a}
+            key={g.id}
             type="button"
-            role="radio"
-            aria-checked={a === avatar}
-            className={`avatar-option ${a === avatar ? 'is-on' : ''}`}
-            style={{ '--avatar-bg': color }}
+            aria-expanded={g.id === open}
+            aria-controls="avatar-group-panel"
+            className={`avatar-group ${g.id === open ? 'is-open' : ''}`}
             onClick={() => {
               play('tap')
-              onChange({ avatar: a, color })
+              setOpen(g.id === open ? null : g.id)
             }}
           >
-            {a}
+            <span className="group-art">
+              <GroupArt id={g.id} />
+            </span>
+            <span className="group-name">
+              {g.name} <span className="group-count">{g.avatars.length}</span>
+            </span>
+            {g.id === current && (
+              <span className="group-current" title="Your avatar is in this group">
+                <Avatar avatar={avatar} color={color} size={30} />
+              </span>
+            )}
           </button>
         ))}
       </div>
+      {group && (
+        <div id="avatar-group-panel" className="avatar-grid" role="radiogroup" aria-label={`${group.name} avatars`}>
+          {group.avatars.map((a) => {
+            const m = manifestMember(a)
+            return (
+              <button
+                key={a}
+                type="button"
+                role="radio"
+                aria-checked={a === avatar}
+                aria-label={m ? `${m.name} from Manifest` : a === CANARY ? 'Canary' : undefined}
+                className={`avatar-option ${m ? 'is-photo' : ''} ${a === avatar ? 'is-on' : ''}`}
+                style={{ '--avatar-bg': color }}
+                onClick={() => {
+                  play('tap')
+                  onChange({ avatar: a, color })
+                }}
+              >
+                <AvatarArt avatar={a} />
+              </button>
+            )
+          })}
+        </div>
+      )}
       <div className="color-row" role="radiogroup" aria-label="Color">
         {AVATAR_COLORS.map((c) => (
           <button

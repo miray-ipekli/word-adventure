@@ -1,5 +1,7 @@
 // What this browser remembers on its own. Explorers and their progress live in the cloud;
 // the copies here make the game start fast and keep working without internet.
+import { MANIFEST_MEMBERS } from '../data/manifest.js'
+
 const PREFS = 'word-adventure.prefs'
 const SESSION = 'word-adventure.session'
 const CACHE = 'word-adventure.cache.'
@@ -45,5 +47,16 @@ export const saveCache = (id, entry) => write(CACHE + id, entry)
 export const loadPublicCache = () => read(PUBLIC, [])
 export const savePublicCache = (list) => write(PUBLIC, list)
 
-export const AVATARS = ['🦊', '🐼', '🐯', '🐸', '🦉', '🐙', '🦄', '🐧', '🐨', '🦁', '🐳', '🐝']
-export const AVATAR_COLORS = ['#FF9F68', '#4FA3F7', '#2EC4A6', '#FF7EB6', '#8E7CF0', '#F7B32B']
+// The canary has no emoji of its own, so it is drawn (CanaryArt.jsx) and saved under this id.
+export const CANARY = 'art:canary'
+
+// Avatars are picked group by group: open a group to see its avatars.
+export const AVATAR_GROUPS = [
+  { id: 'animals', name: 'Animals', avatars: ['🦊', '🐼', '🐯', '🐸', '🦉', '🐙', '🦄', '🐧', '🐨', '🦁', '🐳', '🐝', CANARY] },
+  { id: 'manifest', name: 'Manifest', avatars: MANIFEST_MEMBERS.map((m) => m.id) },
+]
+export const AVATARS = AVATAR_GROUPS.flatMap((g) => g.avatars)
+
+// The group an avatar belongs to; anything unknown falls back to the first group.
+export const avatarGroupOf = (avatar) => (AVATAR_GROUPS.find((g) => g.avatars.includes(avatar)) ?? AVATAR_GROUPS[0]).id
+export const AVATAR_COLORS = ['#FF9F68', '#4FA3F7', '#7BD88F', '#FF7EB6', '#8E7CF0', '#F7B32B', '#F25C5C']

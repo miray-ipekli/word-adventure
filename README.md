@@ -22,6 +22,9 @@ Sonra tarayıcıda http://localhost:5173 adresini aç. Mikrofonlu sorular için 
 - `src/lib/cloud.js`: Firestore'a kaydetme, PIN ile giriş.
 - `src/lib/storage.js`: bu tarayıcıdaki yerel kopya (hızlı açılış ve internetsiz oynama için).
 - `src/components/`: ekranlar (harita, sorular, Speak Studio, My words, ayarlar).
+- `src/data/manifest.js` ve `src/assets/manifest/`: Manifest üyelerinin avatarları. Fotoğraflar proje sahibinin seçtiği
+  görsellerden kırpıldı ve arka planları silindi (saydam WebP), böylece arkada profilin seçtiği renk görünür.
+  Grup logosu Wikimedia Commons'tan ([Manifest-logo.svg](https://commons.wikimedia.org/wiki/File:Manifest-logo.svg), kamu malı yazı logosu).
 
 ## Ada fethi
 

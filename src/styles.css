@@ -514,6 +514,80 @@ p {
   gap: 12px;
 }
 
+.avatar-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.avatar-group {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 8px 8px;
+  border: 2px solid rgba(31, 42, 68, 0.25);
+  border-radius: 16px;
+  background: var(--paper-2);
+  color: var(--ink);
+  font: inherit;
+}
+
+.avatar-group.is-open {
+  border: var(--line);
+  background: #fff;
+  box-shadow: var(--lift-sm);
+  transform: translateY(-2px);
+}
+
+.group-art {
+  height: 52px;
+  display: grid;
+  place-items: center;
+}
+
+.group-animals {
+  display: flex;
+  font-size: 2rem;
+  line-height: 1;
+}
+
+/* The three animals huddle together, the middle one in front. */
+.group-animals > span:nth-child(1) {
+  transform: translate(10px, 6px) rotate(-12deg);
+}
+.group-animals > span:nth-child(2) {
+  position: relative;
+  z-index: 1;
+  font-size: 2.5rem;
+}
+.group-animals > span:nth-child(3) {
+  transform: translate(-10px, 6px) rotate(12deg);
+}
+
+.group-logo {
+  display: block;
+  width: 112px;
+  height: auto;
+}
+
+.group-name {
+  font-weight: 800;
+}
+
+.group-count {
+  font-weight: 600;
+  opacity: 0.6;
+}
+
+.group-current {
+  position: absolute;
+  top: -10px;
+  right: -8px;
+  display: flex;
+}
+
 .avatar-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
@@ -535,6 +609,27 @@ p {
   background: var(--avatar-bg);
   box-shadow: var(--lift-sm);
   transform: translateY(-2px);
+}
+
+/* Manifest photos fill the whole avatar instead of sitting in it like an emoji. */
+.avatar.is-photo,
+.avatar-option.is-photo {
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Drawn avatars (the canary) sit in the tile at about the size of an emoji. */
+.drawn-avatar {
+  display: block;
+  width: 86%;
+  height: 86%;
+}
+
+.manifest-photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .color-row {
