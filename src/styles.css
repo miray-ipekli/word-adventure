@@ -2125,6 +2125,7 @@ p {
 
 .hud-signout {
   min-height: 44px;
+  white-space: nowrap;
 }
 
 .page-top .hud-signout {
@@ -2538,7 +2539,8 @@ p {
   align-items: center;
 }
 
-.tile-word {
+/* Word tiles grow with their word, also on phones where letter tiles get a fixed smaller width. */
+.tile.tile-word {
   width: auto;
   min-width: 52px;
   height: 48px;
