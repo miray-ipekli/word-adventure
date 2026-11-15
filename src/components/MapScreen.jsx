@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { CUSTOM_TOPIC, topicById } from '../data/topics.js'
 import { liveStreak, rankInfo, todayXp, totalXp } from '../lib/progress.js'
-import { activeWords, dueCount, levelName, nextDueAt, nextLevel, trickyWords } from '../lib/srs.js'
+import { activeWords, dueCount, levelName, nextDueAt, nextLevel, starredWords, trickyWords } from '../lib/srs.js'
 import { chestProgress } from '../lib/islands.js'
 import { play } from '../lib/sound.js'
 import { Avatar } from './Pickers.jsx'
@@ -76,11 +76,12 @@ function formatWait(ms) {
 }
 
 export default function MapScreen(props) {
-  const { profile, sound, sync, onIsland, onReview, onTricky, onSpeak, onWords, onSettings, onSwitch, onLevelUp } = props
+  const { profile, sound, sync, onStarred, onIsland, onReview, onTricky, onSpeak, onWords, onSettings, onSwitch, onLevelUp } = props
   const [chestOpen, setChestOpen] = useState(false)
 
   const due = dueCount(profile)
   const tricky = trickyWords(profile)
+  const starred = starredWords(profile)
   const nextDue = nextDueAt(profile)
   const chest = chestProgress(profile)
   const upcoming = nextLevel(profile.level)
@@ -157,6 +158,42 @@ export default function MapScreen(props) {
             </button>
           </article>
 
+          <article className="quest sticker quest-star">
+            <div className="quest-head">
+              <span className="quest-icon" aria-hidden="true">
+                ⭐
+              </span>
+              <div>
+                <h3>Starred words</h3>
+                <p className="muted">
+                  {starred.length
+                    ? 'Your chosen words. They also come back in every daily review.'
+                    : 'Tap ☆ next to any word to keep practicing it, even when you know it.'}
+                </p>
+              </div>
+            </div>
+            {starred.length > 0 && (
+              <ul className="word-chips">
+                {starred.slice(0, 6).map((w) => (
+                  <li key={w.id} className="word-chip is-starred">
+                    {w.en}
+                  </li>
+                ))}
+                {starred.length > 6 && <li className="word-chip">+{starred.length - 6}</li>}
+              </ul>
+            )}
+            <div className="quest-actions">
+              <button type="button" className="btn btn-star" disabled={!starred.length} onClick={onStarred}>
+                {starred.length ? `Practice ${starred.length} starred` : 'No starred words'}
+              </button>
+              {starred.length > 0 && (
+                <button type="button" className="btn btn-ghost btn-small" onClick={() => onWords('starred')}>
+                  See all
+                </button>
+              )}
+            </div>
+          </article>
+
           <div className="quest-row">
             <button type="button" className="quest quest-small sticker" onClick={onSpeak}>
               <span className="quest-icon" aria-hidden="true">
@@ -167,7 +204,7 @@ export default function MapScreen(props) {
                 <span className="muted">Listen, repeat, get a score</span>
               </span>
             </button>
-            <button type="button" className="quest quest-small sticker" onClick={onWords}>
+            <button type="button" className="quest quest-small sticker" onClick={() => onWords()}>
               <span className="quest-icon" aria-hidden="true">
                 📒
               </span>

@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { topicById } from '../data/topics.js'
-import { wordIndex } from '../lib/srs.js'
+import { isStarred, wordIndex } from '../lib/srs.js'
 import { passMark } from '../lib/islands.js'
 import { play } from '../lib/sound.js'
-import { Discover, Example, Question, SpeakerButton } from './Questions.jsx'
+import { Discover, Example, Question, SpeakerButton, StarButton } from './Questions.jsx'
 import Confetti from './Confetti.jsx'
 
 const PRAISE = ['Great!', 'Nice one!', 'Excellent!', 'You got it!', 'Brilliant!', 'Perfect!']
@@ -27,7 +27,7 @@ export default function Session({ profile, steps: initialSteps, mode, topicId, a
   const word = step ? index.get(step.wordId) : null
   const finished = at >= steps.length
   const exam = mode === 'exam'
-  const title = { island: topicById(topicId)?.name, exam: 'Castle exam', tricky: 'Tricky words' }[mode] ?? 'Daily review'
+  const title = { island: topicById(topicId)?.name, exam: 'Castle exam', tricky: 'Tricky words', starred: 'Starred words' }[mode] ?? 'Daily review'
   const score = tally.right + tally.wrong ? tally.right / (tally.right + tally.wrong) : 0
   const passed = exam && score >= passMark(profile.level)
 
@@ -193,10 +193,10 @@ export default function Session({ profile, steps: initialSteps, mode, topicId, a
       <main className="session-stage">
         <div className="panel sticker q-panel" key={`${at}-${step.type}`}>
           {step.retry && <span className="retry-tag">Second chance</span>}
-          {step.practice && <span className="retry-tag">Practice</span>}
+          {step.practice && <span className="retry-tag">{step.starred ? '★ Starred · practice' : 'Practice'}</span>}
           {step.exam && <span className="retry-tag">Castle exam · {at + 1}/{steps.length}</span>}
           {step.kind === 'discover' ? (
-            <Discover word={word} onDone={onDiscover} />
+            <Discover word={word} starred={isStarred(profile, word.id)} onStar={actions.star} onDone={onDiscover} />
           ) : (
             <Question
               word={word}
@@ -218,6 +218,7 @@ export default function Session({ profile, steps: initialSteps, mode, topicId, a
               {feedback.note && <span>{feedback.note}</span>}
               <span className="feedback-word">
                 <b>{word.en}</b> = {word.tr} <SpeakerButton text={word.en} />
+                <StarButton word={word} on={isStarred(profile, word.id)} onToggle={actions.star} />
               </span>
               <Example word={word} />
             </div>

@@ -11,7 +11,7 @@ import {
 } from './lib/storage.js'
 import { awardXp, mergeProgress, newProgress, todayKey } from './lib/progress.js'
 import { changePin, createProfile, deleteProfile, keyFor, newProfileId, saveProgress, unlock, watchProfiles } from './lib/cloud.js'
-import { applyAnswer, buildSession, discoverCard, focusCard } from './lib/srs.js'
+import { applyAnswer, buildSession, discoverCard, focusCard, isStarred } from './lib/srs.js'
 import { buildExam, islandKey, islandSessionOptions, legacyOpenCount } from './lib/islands.js'
 import { caps } from './lib/speech.js'
 import { setSoundEnabled } from './lib/sound.js'
@@ -43,6 +43,7 @@ export default function App() {
   const [screen, setScreen] = useState(start.profile ? 'map' : 'profiles')
   const [run, setRun] = useState(null)
   const [island, setIsland] = useState(null)
+  const [wordsFilter, setWordsFilter] = useState('all')
   const [explorers, setExplorers] = useState(loadPublicCache)
   const [listStatus, setListStatus] = useState('loading')
   const [sync, setSync] = useState('saved')
@@ -218,6 +219,8 @@ export default function App() {
     answer: (wordId, correct) => setCard(wordId, (c) => applyAnswer(c, correct)),
     discover: (wordId, known) => setCard(wordId, () => discoverCard(known)),
     focus: (wordId) => setCard(wordId, (c) => focusCard(c)),
+    star: (wordId) =>
+      updateProfile((p) => ({ ...p, starred: { ...p.starred, [wordId]: { on: !isStarred(p, wordId), at: Date.now() } } })),
     xp: (amount) => amount > 0 && updateProfile((p) => awardXp(p, amount, prefs.deviceId)),
   }
 
@@ -314,6 +317,8 @@ export default function App() {
     case 'words':
       return (
         <MyWords
+          key={wordsFilter}
+          initialFilter={wordsFilter}
           profile={profile}
           actions={actions}
           onAdd={(word) => updateProfile((p) => ({ ...p, custom: [...p.custom, { ...word, at: Date.now() }] }))}
@@ -374,7 +379,11 @@ export default function App() {
           onReview={() => startRun({ mode: 'review' })}
           onTricky={() => startRun({ mode: 'tricky' })}
           onSpeak={() => setScreen('speak')}
-          onWords={() => setScreen('words')}
+          onWords={(filter) => {
+            setWordsFilter(filter ?? 'all')
+            setScreen('words')
+          }}
+          onStarred={() => startRun({ mode: 'starred' })}
           onSettings={() => setScreen('settings')}
           onLevelUp={(level) => changeSettings({ level })}
           onSwitch={signOut}

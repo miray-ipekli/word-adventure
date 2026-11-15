@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react'
 import { CUSTOM_TOPIC, topicById } from '../data/topics.js'
-import { activeWords, statusOf, trickyWords } from '../lib/srs.js'
+import { activeWords, isStarred, statusOf, trickyWords } from '../lib/srs.js'
 import { play } from '../lib/sound.js'
-import { SpeakerButton } from './Questions.jsx'
+import { SpeakerButton, StarButton } from './Questions.jsx'
 
 const FILTERS = [
   { id: 'all', name: 'All' },
+  { id: 'starred', name: '★ Starred' },
   { id: 'tricky', name: 'Tricky' },
   { id: 'learning', name: 'Learning' },
   { id: 'mastered', name: 'Mastered' },
@@ -13,9 +14,9 @@ const FILTERS = [
 ]
 const STATUS_LABEL = { new: 'Not discovered', learning: 'Learning', tricky: 'Tricky', mastered: 'Mastered' }
 
-export default function MyWords({ profile, actions, onAdd, onRemove, onPractice, onExit }) {
+export default function MyWords({ profile, actions, initialFilter = 'all', onAdd, onRemove, onPractice, onExit }) {
   const [form, setForm] = useState({ en: '', tr: '', ex: '' })
-  const [filter, setFilter] = useState('all')
+  const [filter, setFilter] = useState(initialFilter)
   const [query, setQuery] = useState('')
   const [confirmId, setConfirmId] = useState(null)
   const [added, setAdded] = useState('')
@@ -29,7 +30,8 @@ export default function MyWords({ profile, actions, onAdd, onRemove, onPractice,
   const shown = words.filter((w) => {
     const s = statusOf(profile.cards[w.id])
     if (filter === 'mine' && w.topic !== CUSTOM_TOPIC.id) return false
-    if (!['all', 'mine'].includes(filter) && s !== filter) return false
+    if (filter === 'starred' && !isStarred(profile, w.id)) return false
+    if (!['all', 'mine', 'starred'].includes(filter) && s !== filter) return false
     if (q && !w.en.toLowerCase().includes(q) && !w.tr.toLowerCase().includes(q)) return false
     return true
   })
@@ -128,6 +130,9 @@ export default function MyWords({ profile, actions, onAdd, onRemove, onPractice,
                   </span>
                   <span className={`pill pill-${s}`}>{STATUS_LABEL[s]}</span>
                   <span className="word-row-actions">
+                    {(!hidden || w.topic === CUSTOM_TOPIC.id) && (
+                      <StarButton word={w} on={isStarred(profile, w.id)} onToggle={actions.star} />
+                    )}
                     {(!hidden || w.topic === CUSTOM_TOPIC.id) && <SpeakerButton text={w.en} />}
                     {s !== 'new' && s !== 'tricky' && (
                       <button

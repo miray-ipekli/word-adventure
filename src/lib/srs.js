@@ -43,6 +43,14 @@ export function activeWords(profile, topicId) {
   })
 }
 
+export function isStarred(profile, id) {
+  return !!profile.starred?.[id]?.on
+}
+
+export function starredWords(profile) {
+  return wordsFor(profile).filter((w) => isStarred(profile, w.id))
+}
+
 export function isTricky(card) {
   return !!card && card.box < MASTERED_BOX && (card.focus || card.lapses >= 2)
 }
@@ -160,11 +168,27 @@ function shuffle(list) {
   return a
 }
 
+// Extra practice of starred words. It never moves a word forward, so the spacing between
+// real reviews stays intact; a miss still sends the word to the tricky list.
+function starredPractice(profile, caps, words) {
+  return shuffle(words).map((word) => ({
+    kind: 'quiz',
+    wordId: word.id,
+    type: questionTypeFor(profile.cards[word.id] ?? { box: 1 }, profile, caps, word),
+    practice: true,
+    starred: true,
+  }))
+}
+
+export const STARRED_IN_REVIEW = 3
+
 // Builds the list of steps for one play session.
-// mode: 'island' (one topic), 'review' (everything due), 'tricky' (boss words only)
+// mode: 'island' (one topic), 'review' (everything due), 'tricky' (boss words only),
+// 'starred' (every starred word, as practice)
 // allowPhrases: an island only introduces its phrases once the Phrase Cave is open.
 export function buildSession(profile, { mode, topicId, caps, allowPhrases = true, size = 10 }) {
   const now = Date.now()
+  if (mode === 'starred') return starredPractice(profile, caps, starredWords(profile)).slice(0, 15)
   const index = wordIndex(profile)
   const started = Object.entries(profile.cards)
     .filter(([id]) => index.has(id))
@@ -211,6 +235,16 @@ export function buildSession(profile, { mode, topicId, caps, allowPhrases = true
     for (let k = 0; k < gap && r < reviewSteps.length; k++) mixed.push(reviewSteps[r++])
   }
   while (r < reviewSteps.length) mixed.push(reviewSteps[r++])
+
+  // Daily reviews also bring back a few starred words that are not due yet.
+  if (mode === 'review') {
+    const extra = starredPractice(
+      profile,
+      caps,
+      starredWords(profile).filter((w) => !mixed.some((s) => s.wordId === w.id)),
+    ).slice(0, STARRED_IN_REVIEW)
+    extra.forEach((s, i) => mixed.splice(Math.min(mixed.length, (i + 1) * 3), 0, s))
+  }
 
   // Nothing due and nothing new: offer extra practice. Practice answers earn XP but do not
   // move words forward, so the spacing between real reviews stays intact.

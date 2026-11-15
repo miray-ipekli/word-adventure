@@ -7,6 +7,7 @@
 // - XP is kept per device, because each device only ever adds to its own counter
 // - settings (name, level, islands...) carry one `settingsAt`; the newer set wins
 // - island records (story read, exam passed...) only move forward, so the later time wins
+// - stars carry the time they were set or removed; the newer change wins
 
 export const SETTINGS = ['name', 'avatar', 'color', 'level', 'topics', 'dailyGoal', 'micOn']
 
@@ -35,6 +36,7 @@ export function newProgress({ id, name, avatar, color, level, topics }, now = Da
     xpLog: {},
     islands: {},
     openIslands: {},
+    starred: {},
     createdAt: now,
   }
 }
@@ -146,6 +148,11 @@ export function mergeProgress(a, b) {
     islands[key] = out
   }
 
+  const starred = { ...a.starred }
+  for (const [id, star] of Object.entries(b.starred ?? {})) {
+    if (!starred[id] || star.at > starred[id].at) starred[id] = star
+  }
+
   // Explorers from before island conquest keep the islands they had already opened.
   let openIslands = a.openIslands ?? b.openIslands
   if (a.openIslands && b.openIslands) {
@@ -156,6 +163,7 @@ export function mergeProgress(a, b) {
   const merged = {
     ...a,
     islands,
+    starred,
     cards,
     custom: [...custom.values()],
     removed,

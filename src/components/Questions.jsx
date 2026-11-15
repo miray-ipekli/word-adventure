@@ -39,7 +39,26 @@ export function Example({ word }) {
   )
 }
 
-export function Discover({ word, onDone }) {
+// ☆ / ★ toggle. Starred words come back in practice even when they are already known.
+export function StarButton({ word, on, onToggle }) {
+  return (
+    <button
+      type="button"
+      className={`star-btn ${on ? 'is-on' : ''}`}
+      aria-pressed={on}
+      aria-label={on ? `Remove the star from ${word.en}` : `Star ${word.en}`}
+      title={on ? 'Starred. Tap to remove the star.' : 'Star this word to practice it more'}
+      onClick={() => {
+        play('tap')
+        onToggle(word.id)
+      }}
+    >
+      {on ? '★' : '☆'}
+    </button>
+  )
+}
+
+export function Discover({ word, starred, onStar, onDone }) {
   useEffect(() => {
     play('discover')
     speak(word.en)
@@ -51,6 +70,7 @@ export function Discover({ word, onDone }) {
         <h2 className="word-xl">{word.en}</h2>
         <SpeakerButton text={word.en} />
         <SpeakerButton text={word.en} slow />
+        <StarButton word={word} on={starred} onToggle={onStar} />
       </div>
       <p className="discover-tr">{word.tr}</p>
       {word.ex && (

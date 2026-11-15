@@ -2019,6 +2019,54 @@ p {
   margin-left: auto;
 }
 
+.star-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--paper);
+  color: var(--ink-soft);
+  font-size: 1.2rem;
+  line-height: 1;
+  transition: transform 0.12s;
+}
+
+.star-btn.is-on {
+  background: var(--sun);
+  color: var(--ink);
+  animation: pop 0.3s;
+}
+
+.star-btn:active {
+  transform: scale(0.9);
+}
+
+.word-chip.is-starred {
+  background: #fff1c7;
+}
+
+.btn-star {
+  background: var(--sun);
+}
+
+.quest-star .quest-icon {
+  background: #fff1c7;
+}
+
+.quest-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.quest-actions .btn-star {
+  flex: 1;
+}
+
 /* ---------- PIN, cloud and sync ---------- */
 
 .notice {
