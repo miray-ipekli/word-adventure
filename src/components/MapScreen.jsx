@@ -263,7 +263,7 @@ export default function MapScreen(props) {
                 <h2 className="title-lg">{t('The chest is locked')}</h2>
                 <p>
                   {t('It opens when you have conquered all {n} islands. Islands conquered so far:', { n: chest.total })}{' '}
-                  <strong>
+                  <strong className="nowrap">
                     {chest.conquered} / {chest.total}
                   </strong>
                   . {t('Each island ends with a castle: a role-play scene and a final exam.')}

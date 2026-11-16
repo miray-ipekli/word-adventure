@@ -90,6 +90,10 @@ p {
   color: var(--ink-soft);
 }
 
+.nowrap {
+  white-space: nowrap;
+}
+
 .tabular {
   font-variant-numeric: tabular-nums;
 }
@@ -795,9 +799,6 @@ p {
 /* ---------- Map screen ---------- */
 
 .map-screen {
-  background:
-    radial-gradient(circle, rgba(31, 42, 68, 0.08) 1.5px, transparent 1.6px) 0 0 / 22px 22px,
-    var(--paper-2);
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -831,9 +832,15 @@ p {
   flex-direction: column;
   align-items: flex-start;
   line-height: 1.2;
+  min-width: 0;
 }
 
+/* A long name is cut with "…" instead of pushing the buttons to another row. */
 .hud-name strong {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-family: var(--display);
   font-weight: 600;
   font-size: 1.15rem;
@@ -922,121 +929,168 @@ p {
 }
 
 .map-frame {
+  position: relative;
   overflow: hidden;
   padding: 0;
-  background: var(--sea);
+  background: #1f8fc6;
+  /* lets the layers below measure themselves against the frame (the cqw unit) */
+  container-type: inline-size;
+}
+
+/* The map is a stack of layers (see IslandMap.jsx). --u is one unit of the map's own
+   coordinates in pixels, so the CSS layers scale together with the SVG. */
+.map-stack {
+  --u: calc(100cqw / var(--units));
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(55% 42% at 95% 98%, rgba(10, 87, 160, 0.5), rgba(10, 87, 160, 0)),
+    radial-gradient(40% 30% at 2% 2%, rgba(10, 87, 160, 0.5), rgba(10, 87, 160, 0)),
+    radial-gradient(88% 88% at 38% 30%, #86ebe4 0%, #38c2dd 42%, #1170b3 100%);
+}
+
+.map-stack > * {
+  position: absolute;
+  inset: 0;
+}
+
+/* Two sheets of wave marks sliding past each other. Each is one tile wider than the map and
+   moves by exactly one tile, so the loop has no seam. */
+.map-waves {
+  right: auto;
+  width: calc(100% + var(--u) * 120);
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='64' fill='none' stroke='%23fff' stroke-linecap='round'%3E%3Cpath d='M8 18q9-7 18 0t18 0' stroke-opacity='.34' stroke-width='2'/%3E%3Cpath d='M70 48q7-5 14 0t14 0' stroke-opacity='.3' stroke-width='1.5'/%3E%3C/svg%3E") 0 0 / calc(var(--u) * 120) calc(var(--u) * 64);
+  animation: waves-near 26s linear infinite;
+  will-change: transform;
+}
+
+.map-waves-far {
+  left: calc(var(--u) * -190);
+  width: calc(100% + var(--u) * 190);
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='190' height='112' fill='none' stroke='%23fff' stroke-linecap='round'%3E%3Cpath d='M20 30q12-9 24 0t24 0t24 0M112 86q10-7 20 0t20 0' stroke-opacity='.16' stroke-width='2.4'/%3E%3C/svg%3E") 0 0 / calc(var(--u) * 190) calc(var(--u) * 112);
+  animation: waves-far 64s linear infinite;
+}
+
+.map-vignette {
+  background: radial-gradient(74% 74% at 50% 48%, rgba(5, 42, 85, 0) 58%, rgba(5, 42, 85, 0.55) 100%);
+}
+
+.map-glints {
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  animation: glint 5s ease-in-out infinite;
+  will-change: opacity;
+}
+
+.map-glints-1 {
+  animation-duration: 6.5s;
+  animation-delay: -2s;
+}
+
+.map-glints-2 {
+  animation-duration: 8s;
+  animation-delay: -5s;
 }
 
 .map {
   display: block;
   width: 100%;
+  height: 100%;
+}
+
+.map-sky {
+  pointer-events: none;
+}
+
+.sky-cloud,
+.sky-gulls {
+  position: absolute;
   height: auto;
+  overflow: visible;
+  will-change: transform;
 }
 
-.sea-hi {
-  stop-color: var(--sea-hi);
+.sky-cloud {
+  animation: cloud-drift 60s ease-in-out infinite alternate;
 }
 
-.sea-lo {
-  stop-color: var(--sea);
-}
-
-.wave-line {
-  fill: none;
-  stroke: #fff;
-  stroke-opacity: 0.45;
-  stroke-width: 3;
-  stroke-linecap: round;
-}
-
-.wave-layer {
-  animation: drift 14s linear infinite alternate;
-}
-
-.cloud {
-  fill: #fff;
-  stroke: var(--ink);
-  stroke-width: 3;
-  opacity: 0.95;
-  animation: cloud 26s ease-in-out infinite alternate;
-}
-
-.cloud-2 {
-  animation-duration: 34s;
+.sky-cloud-back {
+  animation-duration: 80s;
   animation-direction: alternate-reverse;
 }
+
+.sky-gulls {
+  animation: gulls 48s linear infinite;
+}
+
+/* The map itself is drawn in IslandMap.jsx; fills and the small movements come from there.
+   These rules add the strokes and the text. Class names here must not be reused elsewhere: a
+   CSS transform or animation on a map group would replace the transform attribute that places
+   it. */
 
 .route {
   fill: none;
   stroke-linecap: round;
-  stroke-width: 5;
+  stroke-dasharray: 0.1 17;
+}
+
+.route-shadow {
+  stroke: #062a52;
+  stroke-opacity: 0.28;
+  stroke-width: 7;
 }
 
 .route-ahead {
   stroke: #fff;
-  stroke-opacity: 0.7;
-  stroke-dasharray: 2 14;
+  stroke-opacity: 0.85;
+  stroke-width: 6;
 }
 
 .route-done {
-  stroke: var(--coral);
-  stroke-dasharray: 14 10;
-  animation: march 1.6s linear infinite;
+  stroke: #ffd447;
+  stroke-width: 8;
 }
 
-.island {
+.island,
+.chest {
   cursor: pointer;
-  animation: pop 0.5s cubic-bezier(0.3, 1.5, 0.6, 1) backwards;
-  transform-box: fill-box;
-  transform-origin: center;
-}
-
-.island:hover .island-sand,
-.island:focus-visible .island-sand {
-  filter: brightness(1.06);
-}
-
-.island:hover {
-  transform: translateY(-4px);
-}
-
-.island:focus-visible {
   outline: none;
 }
 
-.island:focus-visible .island-sand {
-  stroke: var(--coral);
+/* The group that lifts has no transform attribute of its own, so CSS may move it. */
+.island-lift {
+  transition: transform 0.2s ease;
+}
+
+.island:hover .island-lift,
+.island:focus-visible .island-lift {
+  transform: translateY(-4px);
+}
+
+.focus-ring {
+  fill: none;
+  stroke: #fff;
   stroke-width: 5;
+  stroke-dasharray: 10 8;
+  stroke-linecap: round;
+  opacity: 0;
 }
 
-.island-shallow {
-  fill: var(--foam);
-  opacity: 0.55;
+.island:focus-visible .focus-ring,
+.chest:focus-visible .focus-ring {
+  opacity: 1;
 }
 
-.island-shadow {
-  fill: var(--ink);
-  opacity: 0.9;
+.foam {
+  fill: none;
+  stroke: #fff;
 }
 
-.island-sand {
-  fill: var(--sand);
-  stroke: var(--ink);
-  stroke-width: 3.5;
-}
-
-.island-land {
-  fill: color-mix(in srgb, var(--topic) 75%, #fff);
-  stroke: var(--ink);
-  stroke-width: 3;
-}
-
-.island.is-locked .island-land {
-  fill: #c9ced8;
-}
-
-.island.is-locked .island-sand {
-  fill: #e9e4d6;
+.here-ring {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 4;
 }
 
 .island-icon {
@@ -1044,41 +1098,47 @@ p {
   pointer-events: none;
 }
 
-.island-banner rect:first-child {
-  fill: var(--paper);
-  stroke: var(--ink);
-  stroke-width: 3;
+/* Locked islands are washed out and still, under a bit of mist. */
+.island.is-locked .isle-art {
+  filter: saturate(0.22) brightness(1.04);
 }
 
+.plate {
+  stroke: rgba(6, 42, 82, 0.16);
+  stroke-width: 1;
+}
+
+.island:hover .plate,
+.chest:hover .plate {
+  stroke: #ffc531;
+  stroke-width: 2.5;
+}
+
+.plate-text,
 .island-name {
   font-family: var(--display);
   font-weight: 600;
-  font-size: 16px;
-  fill: var(--ink);
+  fill: #16324f;
 }
 
-.island-caption {
-  font-family: var(--display);
-  font-weight: 600;
-  font-size: 15px;
-  fill: var(--ink);
-  paint-order: stroke;
-  stroke: #fff;
-  stroke-width: 4px;
+.plate-text {
+  font-size: 13.5px;
+}
+
+.island-name {
+  font-size: 15.5px;
+}
+
+.island.is-locked .plate {
+  fill-opacity: 0.84;
+}
+
+.island.is-locked .island-name {
+  fill: #51657c;
 }
 
 .island-bar-bg {
-  fill: rgba(31, 42, 68, 0.15);
-}
-
-.island-bar {
-  fill: var(--good);
-}
-
-.island-badge circle {
-  fill: var(--coral);
-  stroke: var(--ink);
-  stroke-width: 3;
+  fill: rgba(6, 42, 82, 0.13);
 }
 
 .island-badge text {
@@ -1088,122 +1148,263 @@ p {
   font-size: 14px;
 }
 
-.island-flag line {
-  stroke: var(--ink);
-  stroke-width: 3;
-}
-
-.island-flag path {
-  fill: var(--sun);
-  stroke: var(--ink);
-  stroke-width: 2.5;
-}
-
-.custom-island .island-sand {
-  fill: color-mix(in srgb, var(--topic) 55%, #fff);
-}
-
-.harbor rect {
-  fill: #b9773f;
-  stroke: var(--ink);
-  stroke-width: 3;
-}
-
-.harbor line {
-  stroke: var(--ink);
-  stroke-width: 4;
-}
-
-.harbor text,
-.compass text {
-  font-family: var(--display);
-  font-weight: 600;
-  font-size: 15px;
-  fill: var(--ink);
-  paint-order: stroke;
+.wake {
+  fill: none;
   stroke: #fff;
-  stroke-width: 4px;
-}
-
-.compass circle {
-  fill: rgba(255, 255, 255, 0.6);
-  stroke: var(--ink);
-  stroke-width: 2.5;
-}
-
-.compass path {
-  fill: var(--paper);
-  stroke: var(--ink);
-  stroke-width: 2;
-}
-
-.compass .compass-n {
-  fill: var(--coral);
-}
-
-.boat-bob {
-  animation: bob 2.6s ease-in-out infinite;
-}
-
-.boat-hull {
-  fill: var(--coral);
-  stroke: var(--ink);
-  stroke-width: 3;
-}
-
-.boat line {
-  stroke: var(--ink);
-  stroke-width: 3;
-}
-
-.boat-sail {
-  fill: #fff;
-  stroke: var(--ink);
-  stroke-width: 3;
-}
-
-.chest {
-  cursor: pointer;
-}
-
-.chest:focus-visible {
-  outline: none;
-}
-
-.chest:focus-visible .chest-body {
-  stroke: var(--coral);
-}
-
-.chest-body {
-  fill: #c9803e;
-  stroke: var(--ink);
-  stroke-width: 3;
-}
-
-.chest-lid {
-  fill: #a8642b;
-  stroke: var(--ink);
-  stroke-width: 3;
-}
-
-.chest-lock {
-  fill: var(--sun);
-  stroke: var(--ink);
-  stroke-width: 2;
-}
-
-.chest-x {
-  stroke: var(--coral);
-  stroke-width: 6;
+  stroke-width: 2.4;
   stroke-linecap: round;
 }
 
-.chest-glow {
-  fill: var(--sun);
-  opacity: 0.5;
-  animation: pulse 1.4s ease-in-out infinite;
-  transform-box: fill-box;
-  transform-origin: center;
+.compass text {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 14px;
+  fill: #fff;
+  paint-order: stroke;
+  stroke: rgba(6, 42, 82, 0.55);
+  stroke-width: 3px;
+}
+
+.gull {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.9;
+}
+
+/* ---------- New look: soft light and depth instead of ink outlines. The map screen has it
+   first; the other screens follow. ---------- */
+
+body:has(.map-screen) {
+  background: radial-gradient(1200px 800px at 20% -10%, #2c9fd6 0%, #1273b0 42%, #0a4f86 100%) fixed;
+}
+
+.map-screen .sticker {
+  border: 0;
+  border-radius: 22px;
+  background: linear-gradient(#ffffff, #f5f8fc);
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 14px 30px -12px rgba(3, 30, 66, 0.55),
+    0 3px 8px rgba(3, 30, 66, 0.18);
+}
+
+.map-screen .hud {
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(12px) saturate(1.4);
+}
+
+/* On a wide and tall screen the map stays in view while the quests scroll past it. (On a short
+   screen a stuck map would keep its lower part out of reach.) */
+@media (min-width: 981px) and (min-height: 800px) {
+  .map-screen .map-frame {
+    position: sticky;
+    top: 96px;
+  }
+}
+
+.map-screen .map-frame {
+  border: 5px solid rgba(255, 255, 255, 0.94);
+  border-radius: 28px;
+  background: #1f8fc6;
+  box-shadow:
+    0 22px 44px -18px rgba(3, 30, 66, 0.7),
+    0 4px 10px rgba(3, 30, 66, 0.25);
+}
+
+/* A thin inner shadow, so the sea looks set into its frame. */
+.map-screen .map-frame::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 23px;
+  box-shadow:
+    inset 0 0 0 1px rgba(6, 42, 82, 0.28),
+    inset 0 4px 12px rgba(6, 42, 82, 0.35);
+  pointer-events: none;
+}
+
+.map-screen .quests-title {
+  color: #fff;
+  text-shadow: 0 2px 6px rgba(3, 30, 66, 0.5);
+}
+
+.map-screen .avatar {
+  border: 3px solid #fff;
+  box-shadow:
+    0 0 0 2px rgba(18, 115, 176, 0.35),
+    0 6px 12px -4px rgba(3, 30, 66, 0.5);
+}
+
+.map-screen .chip {
+  border: 0;
+  background: linear-gradient(#e3f1ff, #cfe4fb);
+  color: #17538f;
+}
+
+.map-screen .hud-label {
+  color: var(--ink-soft);
+}
+
+.map-screen .xp-bar,
+.map-screen .meter {
+  height: 12px;
+  border: 0;
+  background: #e3eaf3;
+  box-shadow: inset 0 2px 3px rgba(6, 42, 82, 0.2);
+}
+
+.map-screen .xp-bar span,
+.map-screen .meter span {
+  border-right: 0;
+  border-radius: 999px;
+  background: linear-gradient(#ffe588, #ffb41f);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.6);
+}
+
+.map-screen .hud-stat {
+  border: 0;
+  background: #eef3f9;
+  box-shadow: inset 0 0 0 1px rgba(6, 42, 82, 0.08);
+}
+
+.map-screen .streak.is-on {
+  background: linear-gradient(#ffe9d9, #ffd2b3);
+  color: #a9410c;
+}
+
+.map-screen .sync {
+  border: 0;
+  padding: 4px 12px;
+  background: #dff6e8;
+  color: #14713d;
+}
+
+.map-screen .sync-saving {
+  background: #eef3f9;
+  color: var(--ink-soft);
+}
+
+.map-screen .sync-offline,
+.map-screen .sync-gone {
+  background: #ffe4e1;
+  color: #b3261e;
+}
+
+/* Buttons look pressable: a lit top edge, a darker rim underneath, a soft shadow below. */
+.map-screen .btn,
+.map-screen .icon-btn {
+  --rim: #c3d1e2;
+  --glow: rgba(3, 30, 66, 0.4);
+  border: 0;
+  border-radius: 16px;
+  background: linear-gradient(#ffffff, #e9f0f8);
+  color: var(--ink);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 4px 0 var(--rim),
+    0 12px 18px -8px var(--glow);
+}
+
+.map-screen .icon-btn {
+  border-radius: 14px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 3px 0 var(--rim),
+    0 8px 12px -6px var(--glow);
+}
+
+.map-screen .btn:hover:not(:disabled),
+.map-screen .icon-btn:hover {
+  filter: brightness(1.03);
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 5px 0 var(--rim),
+    0 14px 20px -8px var(--glow);
+}
+
+.map-screen .btn:active:not(:disabled),
+.map-screen .icon-btn:active {
+  transform: translateY(3px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 1px 0 var(--rim);
+}
+
+.map-screen .btn-primary,
+.map-screen .btn-star {
+  --rim: #d48806;
+  --glow: rgba(212, 136, 6, 0.7);
+  background: linear-gradient(#ffe06d, #ffb21f);
+  color: #5a3600;
+}
+
+.map-screen .btn-boss {
+  --rim: #4a25b3;
+  --glow: rgba(74, 37, 179, 0.7);
+  background: linear-gradient(#a182ff, #6a3fe0);
+  color: #fff;
+}
+
+.map-screen .btn:disabled {
+  opacity: 1;
+  background: #e8edf4;
+  color: #93a1b3;
+  box-shadow: inset 0 0 0 1px rgba(6, 42, 82, 0.06);
+}
+
+.map-screen .btn-ghost,
+.map-screen .btn-ghost:hover:not(:disabled) {
+  background: transparent;
+  box-shadow: none;
+  color: #17538f;
+}
+
+.map-screen .quest-icon {
+  border: 0;
+  border-radius: 16px;
+  background: linear-gradient(#fff3cf, #ffe09a);
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 4px 8px -3px rgba(160, 110, 0, 0.4);
+}
+
+.map-screen .quest-boss .quest-icon {
+  background: linear-gradient(#f3ecff, #dccbff);
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 4px 8px -3px rgba(74, 37, 179, 0.4);
+}
+
+.map-screen .quest-hot {
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 0 0 3px rgba(255, 200, 60, 0.75),
+    0 14px 30px -12px rgba(3, 30, 66, 0.55);
+}
+
+.map-screen .word-chip {
+  border: 0;
+  background: #eef3f9;
+}
+
+.map-screen .word-chip.is-tricky {
+  background: #efe8ff;
+  color: #5b34c9;
+}
+
+.map-screen .word-chip.is-starred {
+  background: #fff1c7;
+  color: #8a5a00;
+}
+
+.map-screen .modal-backdrop {
+  background: rgba(3, 30, 66, 0.55);
+  backdrop-filter: blur(4px);
 }
 
 /* Quests column */
@@ -2656,28 +2857,38 @@ p {
   }
 }
 
-@keyframes pulse {
-  50% {
-    transform: scale(1.15);
-    opacity: 0.25;
+@keyframes glint {
+  0%,
+  55%,
+  100% {
+    opacity: 0;
+  }
+  78% {
+    opacity: 0.95;
   }
 }
 
-@keyframes march {
+@keyframes waves-near {
   to {
-    stroke-dashoffset: -48;
+    transform: translateX(calc(var(--u) * -120));
   }
 }
 
-@keyframes drift {
+@keyframes waves-far {
   to {
-    transform: translateX(-40px);
+    transform: translateX(calc(var(--u) * 190));
   }
 }
 
-@keyframes cloud {
+@keyframes cloud-drift {
   to {
-    transform: translateX(60px);
+    transform: translateX(calc(var(--u) * 60));
+  }
+}
+
+@keyframes gulls {
+  to {
+    transform: translate(calc(var(--u) * var(--span)), calc(var(--u) * -70));
   }
 }
 
@@ -2718,17 +2929,45 @@ p {
     grid-template-columns: minmax(0, 1fr);
   }
 
+  /* Phone top bar: who and the three buttons, then the rank bar, then the small counters. */
   .hud {
-    gap: 10px;
+    gap: 10px 8px;
   }
 
-  .hud-rank {
-    order: 3;
-    flex-basis: 100%;
+  .hud-who {
+    flex: 1 1 0;
+    min-width: 0;
   }
 
   .hud-stats {
-    margin-left: auto;
+    display: contents;
+  }
+
+  .hud-rank {
+    order: 2;
+    flex-basis: 100%;
+  }
+
+  .hud-stat,
+  .hud .sync {
+    order: 3;
+  }
+
+  /* The door alone is enough here; the words stay for screen readers. */
+  .hud .hud-signout {
+    width: 44px;
+    padding: 0;
+    font-size: 0;
+  }
+
+  .hud .hud-signout span {
+    font-size: 1.2rem;
+  }
+
+  .hud .sync {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .quest-row {
