@@ -13,7 +13,7 @@ import {
 import { awardXp, mergeProgress, newProgress, publicFields, todayKey } from './lib/progress.js'
 import { changePin, deleteProfile, keyFor, newProfileId, saveProgress, unlock, watchProfiles } from './lib/cloud.js'
 import { withTimeout } from './lib/timeout.js'
-import { browserLang, LangRoot, langOf } from './lib/i18n.js'
+import { browserLang, LangRoot, langOf, withLang } from './lib/i18n.js'
 import { applyAnswer, buildSession, discoverCard, focusCard, isStarred } from './lib/srs.js'
 import { buildExam, islandKey, islandSessionOptions, legacyOpenCount } from './lib/islands.js'
 import { caps } from './lib/speech.js'
@@ -184,6 +184,13 @@ export default function App() {
     flush()
   }
 
+  // Signing in: the game opens in the language the start screen is showing, and the explorer
+  // keeps it from then on (it can be changed again on the map and in Settings).
+  const enter = (id, key, saved, opts = {}) => {
+    const data = withLang(saved, prefs.menuLang ?? browserLang())
+    open(id, key, data, data === saved ? opts : { ...opts, pending: true })
+  }
+
   const signIn = async (id, pin) => {
     const key = await keyFor(id, pin)
     const cached = loadCache(id)
@@ -194,7 +201,7 @@ export default function App() {
     } catch {
       // Offline or slow: a device that played this explorer before can check the PIN itself.
       if (known) {
-        open(id, key, cached.data, { pending: !!cached.pending, isNew: !!cached.isNew })
+        enter(id, key, cached.data, { pending: !!cached.pending, isNew: !!cached.isNew })
         return 'ok'
       }
       return 'offline'
@@ -202,12 +209,12 @@ export default function App() {
     if (!remote) {
       // Created on this device while offline and not uploaded yet: the saved copy is the only one.
       if (known && cached.isNew) {
-        open(id, key, cached.data, { pending: true, isNew: true })
+        enter(id, key, cached.data, { pending: true, isNew: true })
         return 'ok'
       }
       return 'wrong'
     }
-    open(id, key, known ? mergeProgress(cached.data, remote) : remote, { pending: known && !!cached.pending })
+    enter(id, key, known ? mergeProgress(cached.data, remote) : remote, { pending: known && !!cached.pending })
     return 'ok'
   }
 
@@ -449,6 +456,7 @@ export default function App() {
           onStarred={() => startRun({ mode: 'starred' })}
           onSettings={() => setScreen('settings')}
           onLevelUp={(level) => changeSettings({ level })}
+          onLang={(lang) => changeSettings({ lang })}
           onSwitch={signOut}
         />
       )

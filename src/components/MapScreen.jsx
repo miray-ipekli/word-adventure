@@ -4,8 +4,8 @@ import { liveStreak, rankInfo, todayXp, totalXp } from '../lib/progress.js'
 import { activeWords, dueCount, levelName, nextDueAt, nextLevel, starredWords, trickyWords } from '../lib/srs.js'
 import { chestProgress } from '../lib/islands.js'
 import { play } from '../lib/sound.js'
-import { useT } from '../lib/i18n.js'
-import { Avatar } from './Pickers.jsx'
+import { langOf, useT } from '../lib/i18n.js'
+import { Avatar, LangSwitch } from './Pickers.jsx'
 import IslandMap from './IslandMap.jsx'
 import Modal from './Modal.jsx'
 
@@ -22,7 +22,7 @@ function GoalRing({ value, goal }) {
 
 const SYNC_LABEL = { saved: 'Saved', saving: 'Saving…', offline: 'Offline · will sync', gone: 'Not saved · sign in again' }
 
-function Hud({ profile, sound, sync, onSwitch, onSettings }) {
+function Hud({ profile, sound, sync, onSwitch, onSettings, onLang }) {
   const t = useT()
   const rank = rankInfo(totalXp(profile))
   const xpToday = todayXp(profile)
@@ -61,6 +61,7 @@ function Hud({ profile, sound, sync, onSwitch, onSettings }) {
         <button type="button" className="icon-btn" onClick={onSettings} aria-label={t('Settings')}>
           ⚙️
         </button>
+        <LangSwitch value={langOf(profile, t.lang)} onChange={onLang} />
         <button type="button" className="btn btn-small hud-signout" onClick={onSwitch} title={t('Back to the explorer list')}>
           <span aria-hidden="true">🚪</span> {t('Sign out')}
         </button>
@@ -78,7 +79,7 @@ function formatWait(ms, t) {
 }
 
 export default function MapScreen(props) {
-  const { profile, sound, sync, onStarred, onIsland, onReview, onTricky, onSpeak, onWords, onSettings, onSwitch, onLevelUp } = props
+  const { profile, sound, sync, onStarred, onIsland, onReview, onTricky, onSpeak, onWords, onSettings, onSwitch, onLevelUp, onLang } = props
   const t = useT()
   const [chestOpen, setChestOpen] = useState(false)
 
@@ -96,7 +97,7 @@ export default function MapScreen(props) {
 
   return (
     <div className="screen map-screen">
-      <Hud profile={profile} sound={sound} sync={sync} onSwitch={onSwitch} onSettings={onSettings} />
+      <Hud profile={profile} sound={sound} sync={sync} onSwitch={onSwitch} onSettings={onSettings} onLang={onLang} />
 
       <div className="map-layout">
         <section className="map-frame sticker" aria-label={t('Map')}>

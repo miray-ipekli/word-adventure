@@ -154,6 +154,11 @@ p {
 
 .lang-switch {
   background: var(--paper);
+  white-space: nowrap;
+}
+
+.lang-code {
+  display: none;
 }
 
 .sea-screen {
@@ -832,7 +837,17 @@ p {
   flex-direction: column;
   align-items: flex-start;
   line-height: 1.2;
+  /* takes the room that is left and cuts what does not fit, instead of sliding under the buttons */
+  flex: 1;
   min-width: 0;
+  overflow: hidden;
+}
+
+.hud-name .chip {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* A long name is cut with "…" instead of pushing the buttons to another row. */
@@ -2324,7 +2339,8 @@ body:has(.map-screen) {
   color: var(--bad);
 }
 
-.hud-signout {
+.hud-signout,
+.hud .lang-switch {
   min-height: 44px;
   white-space: nowrap;
 }
@@ -2962,6 +2978,31 @@ body:has(.map-screen) {
 
   .hud .hud-signout span {
     font-size: 1.2rem;
+  }
+
+  /* The language switch becomes a fourth square button: "EN" or "TR". */
+  .hud .lang-switch {
+    width: 44px;
+    min-height: 44px;
+    padding: 0;
+    font-size: 0;
+  }
+
+  .hud .lang-switch .lang-globe,
+  .hud .lang-switch .lang-name {
+    display: none;
+  }
+
+  .hud .lang-switch .lang-code {
+    display: inline;
+    font-size: 0.95rem;
+  }
+}
+
+/* The narrowest phones: four buttons leave no room for the name, so the avatar stands alone. */
+@media (max-width: 360px) {
+  .hud .hud-name {
+    display: none;
   }
 
   .hud .sync {

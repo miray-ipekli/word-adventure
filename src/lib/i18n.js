@@ -21,6 +21,12 @@ export const defaultLangForLevel = (level) => (level === 'beginner' ? 'tr' : 'en
 // `fallback` (the start screen's language on this device), or else the one for their level.
 export const langOf = (profile, fallback) => profile?.lang ?? fallback ?? defaultLangForLevel(profile?.level)
 
+// Signing in opens the game in the language of the start screen and saves it with the explorer.
+// Returns the same object when nothing changes.
+export function withLang(profile, lang, now = Date.now()) {
+  return profile.lang === lang ? profile : { ...profile, lang, settingsAt: now }
+}
+
 // Language for screens before anyone signs in, on a device that has not chosen one yet.
 export const browserLang = () => (typeof navigator !== 'undefined' && /^tr\b/i.test(navigator.language ?? '') ? 'tr' : 'en')
 

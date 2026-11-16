@@ -212,7 +212,9 @@ export function LangPicker({ value, onChange }) {
   )
 }
 
-// Small switch for the corner of the start screen.
+// Small switch for the corner of the start screen and the top bar of the map. It names the
+// language it switches to; where there is little room only the short code is shown (see
+// .lang-code in styles.css).
 export function LangSwitch({ value, onChange }) {
   const t = useT()
   const other = LANGS.find((l) => l.id !== value) ?? LANGS[0]
@@ -227,7 +229,13 @@ export function LangSwitch({ value, onChange }) {
       aria-label={t('Menu language')}
       title={t('Menu language')}
     >
-      <span aria-hidden="true">🌐</span> {other.name}
+      <span className="lang-globe" aria-hidden="true">
+        🌐
+      </span>{' '}
+      <span className="lang-name">{other.name}</span>
+      <span className="lang-code" aria-hidden="true">
+        {other.id.toUpperCase()}
+      </span>
     </button>
   )
 }

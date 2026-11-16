@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import TR from '../src/data/tr.js'
-import { defaultLangForLevel, langOf, makeT, translate } from '../src/lib/i18n.js'
+import { defaultLangForLevel, langOf, makeT, translate, withLang } from '../src/lib/i18n.js'
 import { mergeProgress, newProgress } from '../src/lib/progress.js'
 import { allKeys } from './i18n-keys.js'
 
@@ -55,4 +55,15 @@ test('the chosen language is saved with the explorer and survives a merge of two
   const later = { ...p, lang: 'en', settingsAt: 2000 }
   assert.equal(mergeProgress(p, later).lang, 'en')
   assert.equal(mergeProgress(later, p).lang, 'en')
+})
+
+test('signing in takes the language of the start screen and saves it as the newest setting', () => {
+  const p = { id: 'p', level: 'intermediate', lang: 'tr', settingsAt: 100 }
+  const en = withLang(p, 'en', 500)
+  assert.equal(en.lang, 'en')
+  assert.equal(en.settingsAt, 500)
+  // nothing to change: the very same object comes back, so nothing is marked as unsaved
+  assert.equal(withLang(p, 'tr', 500), p)
+  // an explorer from before the setting gets the language too
+  assert.equal(withLang({ id: 'q', level: 'beginner' }, 'en', 500).lang, 'en')
 })
